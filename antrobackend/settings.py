@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 from pathlib import Path
 import datetime
 import environ
+import os
 
 env = environ.Env(
     DEBUG=(bool, False)
@@ -185,3 +186,6 @@ GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.3/lib/libgdal.dylib"
 GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.1/lib/libgeos_c.dylib"
 
 ALLOWED_HOSTS = ['*']
+
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')

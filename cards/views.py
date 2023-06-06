@@ -67,9 +67,9 @@ class SearchCardView(APIView):
             distance = request.data['location']['distance']
 
             user_location = fromstr(f'POINT({longitude} {latitude})', srid=4326)
-            print(queryset)
             queryset = queryset.annotate(distance=Distance('location', user_location)).filter(distance__lte = distance)
-            print(queryset, "AFA")
+            if 'profession' in request.data:
+                queryset = queryset.filter(profession__icontains = request.data['profession'])
         card_serializer_obj = CardSerializer(queryset, many=True)
         return Response({
             'message': 'successfully retrieve cards information',

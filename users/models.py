@@ -75,9 +75,18 @@ class UserProfile(models.Model):
         )
         bio = models.CharField(max_length=200, default='', blank=True)
         phone = models.IntegerField(default=0, blank=True)
-        image = models.ImageField(upload_to='profile_image', blank=True)
+        image = models.ImageField(upload_to='profile_image', blank=True, null = True)
         gender = models.CharField(default='', blank=True, max_length=20)
-
+        contact_information = models.CharField(null=True, blank= True, max_length=50)
+        Education: models.CharField(null=True, blank= True, max_length=50)
+        Experience: models.FloatField(null=True, blank= True)
+        Skills: models.CharField(null=True, blank= True, max_length=1000)
+        Certifications: models.CharField(null=True, blank= True, max_length=1000)
+        awards_recognitions = models.CharField(null=True, blank= True, max_length=1000)
+        personal_website = models.CharField(null=True, blank= True, max_length=1000)
+        conference_event = models.CharField(null=True, blank= True, max_length=1000)
+        languages = models.CharField(null=True, blank= True, max_length=1000)
+        projects = models.CharField(null=True, blank= True, max_length=1000)
         def __str__(self):
                 return self.user.email
         

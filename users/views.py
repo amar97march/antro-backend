@@ -8,8 +8,9 @@ from rest_framework.response import  Response
 from rest_framework.views import APIView
 from .utils import get_tokens_for_user
 from users.models import User, PhoneVerification, UserProfile, RequestData
-from .serializers import RegistrationSerializer, PasswordChangeSerializer
+from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer
 from .utils import send_verification_otp
+from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
 import datetime
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -110,3 +111,20 @@ class GetData(APIView):
             print(e)
             return Response({'request_id':id, 'response_data': 'Invalid request id'}, status=status.HTTP_400_BAD_REQUEST)
         
+
+
+class UserProfileView(APIView):
+
+    permission_classes = [IsAuthenticated, ]
+    def get(self, request):
+        profile = get_object_or_404(UserProfile, user=request.user)
+        serializer = UserProfileSerializer(profile)
+        return Response(serializer.data)
+
+    def put(self, request):
+        profile = get_object_or_404(UserProfile, user=request.user)
+        serializer = UserProfileSerializer(profile, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

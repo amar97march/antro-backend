@@ -79,7 +79,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'middlewares.requestData.RequestLogMiddleWare'
+    # 'middlewares.requestData.RequestLogMiddleWare'
 ]
 
 ROOT_URLCONF = 'antrobackend.urls'
@@ -113,26 +113,26 @@ WSGI_APPLICATION = 'antrobackend.wsgi.application'
 #     }
 # }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-#         'NAME': 'antro',
-#         'USER': 'antrodb',
-#         'PASSWORD': 'db@123456789',
-#         'HOST': 'localhost',
-#         'PORT': 5432,
-#     }
-# }
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'antro',
-        'USER': 'antrouser',
-        'PASSWORD': 'Pass_1234',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'antrodb',
+        'USER': 'antro',
+        'PASSWORD': 'db@123456789',
         'HOST': 'localhost',
-        'PORT': '',
+        'PORT': 5432,
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'antro',
+#         'USER': 'antrouser',
+#         'PASSWORD': 'Pass_1234',
+#         'HOST': 'localhost',
+#         'PORT': '',
+#     }
+# }
 
 
 # Password validation

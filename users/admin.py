@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from django.core.exceptions import ValidationError
 from django import forms
-from .models import User, UserProfile, PhoneVerification, RequestData
+from .models import User, UserProfile, PhoneVerification, RequestData, AddressBookItem
 
 
 class UserCreationForm(forms.ModelForm):
@@ -69,3 +69,4 @@ admin.site.register(User, UserAdmin)
 admin.site.register(UserProfile)
 admin.site.register(PhoneVerification)
 admin.site.register(RequestData)
+admin.site.register(AddressBookItem)

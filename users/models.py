@@ -5,6 +5,36 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save
 
 
+
+
+
+PROFILE_CATEGORY = (
+    ("Social Networking", "Social Networking"),
+    ("Video Sharing", "Video Sharing"),
+    ("Messaging", "Messaging"),
+    ("Event Management", "Event Management"),
+    ("Photo Sharing", "Photo Sharing"),
+    ("Music Streaming", "Music Streaming"),
+    ("Blogging", "Blogging"),
+    ("Question and Answer", "Question and Answer"),
+    ("Review and Recommendation", "Review and Recommendation"),
+    ("Location-Based", "Location-Based"),
+    ("Video Conferencing", "Video Conferencing"),
+    ("Gaming", "Gaming"),
+    ("Ride-Sharing", "Ride-Sharing"),
+    ("Dating", "Dating"),
+    ("News Aggregation", "News Aggregation"),
+    ("File Sharing and Cloud Storage", "File Sharing and Cloud Storage"),
+    ("Podcast", "Podcast"),
+    ("Payment Gateways", "Payment Gateways"),
+    ("Blockchain", "Blockchain"),
+    ("Open-Source Development", "Open-Source Development"),
+    ("Virtual Reality", "Virtual Reality"),
+    ("Augmented Reality", "Augmented Reality"),
+    ("Artificial Intelligence", "Artificial Intelligence"),
+    ("Other", "Other")
+)
+
 class UserManager(BaseUserManager):
 
   def _create_user(self, email, password, is_staff, is_superuser, **extra_fields):
@@ -35,7 +65,8 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length=254, unique=True)
-    name = models.CharField(max_length=254, null=True, blank=True)
+    first_name = models.CharField(max_length=254, null=True, blank=True)
+    last_name = models.CharField(max_length=254, null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
@@ -116,6 +147,20 @@ class RequestData(models.Model):
       )
      data = models.JSONField(default = dict)
      request_id = models.UUIDField(primary_key = True)
+     created_at = models.DateTimeField(auto_now_add=True)
+
+     def __str__(self):
+         return self.user.email
+
+from profiles.models import Profile,ProfileCategorySocialSite, ProfileCategory
+
+class AddressBookItem(models.Model):
+     
+     user = models.ForeignKey(
+                User, 
+                on_delete=models.CASCADE
+      )
+     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
      created_at = models.DateTimeField(auto_now_add=True)
 
      def __str__(self):

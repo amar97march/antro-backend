@@ -7,8 +7,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import  Response
 from rest_framework.views import APIView
 from .utils import get_tokens_for_user
-from users.models import User, PhoneVerification, UserProfile, RequestData
-from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer
+from users.models import User, PhoneVerification, UserProfile, RequestData, AddressBookItem
+from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer, \
+AddressBookItemSerializer
 from .utils import send_verification_otp
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
@@ -39,6 +40,9 @@ class LoginView(APIView):
         if user is not None:
             login(request, user)
             auth_data = get_tokens_for_user(request.user)
+            phone_obj = PhoneVerification.objects.get(user = user)
+            print(auth_data, user, phone_obj.verified)
+            auth_data["verified"] = phone_obj.verified
             return Response({'data': 'Login Success', **auth_data}, status=status.HTTP_200_OK)
         return Response({'data': 'Invalid Credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -128,3 +132,28 @@ class UserProfileView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+from profiles.models import ProfileCategory, ProfileCategorySocialSite
+
+class AddressBook(APIView):
+
+    permission_classes = [IsAuthenticated, ]
+
+    def get(self, request):
+
+        try:
+            data = {}
+
+            for cat in ProfileCategory.objects.all():
+
+                address_book_items = AddressBookItem.objects.filter(user = request.user,profile__category = cat)
+                if (address_book_items):
+                    serializer = AddressBookItemSerializer(address_book_items, many = True)
+                    data[cat.name] = serializer.data
+
+            return Response({'data': data}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            print(e)
+            return Response({'error': 'Error fetching '+ str(e)}, status=status.HTTP_400_BAD_REQUEST)

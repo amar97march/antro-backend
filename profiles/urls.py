@@ -5,9 +5,9 @@ from rest_framework_simplejwt import views as jwt_views
 
 from .views import *
 
-app_name = 'cards'
+app_name = 'profiles'
 
 urlpatterns = [
-    path('cards/', CardView.as_view(), name='card'),
-    path('search/', SearchCardView.as_view(), name='search'),
+    path('profiles/', ProfileView.as_view(), name='profile'),
+    path('search/', SearchProfileView.as_view(), name='search'),
 ]

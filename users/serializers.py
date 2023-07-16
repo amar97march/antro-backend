@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, UserProfile
+from .models import User, UserProfile, AddressBookItem
 
 
 
@@ -8,7 +8,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'name', 'date_of_birth']
+        fields = ['email', 'first_name', 'last_name', 'date_of_birth']
         read_only_fields = ['email']
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -67,3 +67,16 @@ class PasswordChangeSerializer(serializers.Serializer):
         if not self.context['request'].user.check_password(value):
             raise serializers.ValidationError({'current_password': 'Does not match'})
         return value
+    
+from profiles.serializers import ProfileSerializer
+class AddressBookItemSerializer(serializers.Serializer):
+
+    class Meta:
+        model = AddressBookItem
+        fields = ''
+
+    def to_representation(self, instance):
+        representation = dict()
+        representation["user"] = instance.user.email
+        representation["profile"] = ProfileSerializer(instance.profile).data 
+        return representation

@@ -113,26 +113,30 @@ WSGI_APPLICATION = 'antrobackend.wsgi.application'
 #     }
 # }
 
+
+# Local
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.contrib.gis.db.backends.postgis',
+#         'NAME': 'antrodb',
+#         'USER': 'antro',
+#         'PASSWORD': 'db@123456789',
+#         'HOST': 'localhost',
+#         'PORT': 5432,
+#     }
+# }
+
+# Server
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'antrodb',
-        'USER': 'antro',
-        'PASSWORD': 'db@123456789',
+        'NAME': 'antro',
+        'USER': 'antrouser',
+        'PASSWORD': 'Pass_1234',
         'HOST': 'localhost',
         'PORT': 5432,
     }
 }
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-#         'NAME': 'antro',
-#         'USER': 'antrouser',
-#         'PASSWORD': 'Pass_1234',
-#         'HOST': 'localhost',
-#         'PORT': '',
-#     }
-# }
 
 
 # Password validation

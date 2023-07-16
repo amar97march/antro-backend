@@ -105,46 +105,46 @@ for item in ProfileCategory.objects.all():
         name="Other", profile_category=item)
 
 
-user_list = list(User.objects.all())
-profile_social_list = list(ProfileCategorySocialSite.objects.all())
+# user_list = list(User.objects.all())
+# profile_social_list = list(ProfileCategorySocialSite.objects.all())
 
-for profile in range(0, 100):
-    social_site_obj = random.choice(profile_social_list)
-    print(social_site_obj.id, "==",  social_site_obj.profile_category.id)
-    location_obj = fake.location_on_land()
-    data = {
-        "name": fake.name(),
-        "company_name": fake.company(),
-        "address": fake.address(),
-        "city": fake.city(),
-        "profession": fake.job(),
-        "category": social_site_obj.profile_category.id,
-        "social_site": social_site_obj.id,
-        "location": {
-            "latitude": location_obj[0],
-            "longitude": location_obj[1]
-        },
-        "keywords": [
-            fake.job(),
-            fake.job(),
-            fake.job()
-        ]
-    }
-    data["user"] = random.choice(user_list).id
-    # print(data)
-    keywords = []
-    for item in data['keywords']:
-        # print(item)
-        keyword_obj, created = Keyword.objects.get_or_create(name=item)
-        keywords.append(keyword_obj.id)
-    # print(keywords)
-    data['keywords'] = keywords
-    longitude = data['location']['longitude']
-    latitude = data['location']['latitude']
-    location = fromstr(f'POINT({longitude} {latitude})', srid=4326)
-    data['location'] = location
-    profile_serializer_obj = ProfileSerializer(data=data)
-    if profile_serializer_obj.is_valid():
-        profile_serializer_obj.save()
-    else:
-        print("Error: ", profile_serializer_obj.errors)
+# for profile in range(0, 100):
+#     social_site_obj = random.choice(profile_social_list)
+#     print(social_site_obj.id, "==",  social_site_obj.profile_category.id)
+#     location_obj = fake.location_on_land()
+#     data = {
+#         "name": fake.name(),
+#         "company_name": fake.company(),
+#         "address": fake.address(),
+#         "city": fake.city(),
+#         "profession": fake.job(),
+#         "category": social_site_obj.profile_category.id,
+#         "social_site": social_site_obj.id,
+#         "location": {
+#             "latitude": location_obj[0],
+#             "longitude": location_obj[1]
+#         },
+#         "keywords": [
+#             fake.job(),
+#             fake.job(),
+#             fake.job()
+#         ]
+#     }
+#     data["user"] = random.choice(user_list).id
+#     # print(data)
+#     keywords = []
+#     for item in data['keywords']:
+#         # print(item)
+#         keyword_obj, created = Keyword.objects.get_or_create(name=item)
+#         keywords.append(keyword_obj.id)
+#     # print(keywords)
+#     data['keywords'] = keywords
+#     longitude = data['location']['longitude']
+#     latitude = data['location']['latitude']
+#     location = fromstr(f'POINT({longitude} {latitude})', srid=4326)
+#     data['location'] = location
+#     profile_serializer_obj = ProfileSerializer(data=data)
+#     if profile_serializer_obj.is_valid():
+#         profile_serializer_obj.save()
+#     else:
+#         print("Error: ", profile_serializer_obj.errors)

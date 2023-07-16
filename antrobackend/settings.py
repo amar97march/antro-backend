@@ -182,8 +182,12 @@ AUTH_PROFILE_MODULE = 'users.User'
 AUTH_USER_MODEL = 'users.User'
 
 
-GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.4_6/lib/libgdal.dylib"
-GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.2/lib/libgeos_c.dylib"
+GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.3/lib/libgdal.dylib"
+GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.1/lib/libgeos_c.dylib"
+
+# Local
+# GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.4_6/lib/libgdal.dylib"
+# GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.2/lib/libgeos_c.dylib"
 
 ALLOWED_HOSTS = ['*']
 

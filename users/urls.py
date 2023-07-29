@@ -18,4 +18,5 @@ urlpatterns = [
     path('token-refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('get_data/<str:id>/', GetData.as_view(), name='get_data'),
     path('address_book/', AddressBook.as_view(), name='address_book'),
+    path('add_address_book_profile/', AddAddressBookProfile.as_view(), name='add_address_book_profile'),
 ]

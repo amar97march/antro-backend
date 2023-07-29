@@ -105,7 +105,7 @@ class UserProfile(models.Model):
                 related_name='userprofile'
         )
         bio = models.CharField(max_length=200, default='', blank=True)
-        phone = models.IntegerField(default=0, blank=True)
+        phone = models.CharField(blank=True, null=True, max_length=20)
         image = models.ImageField(upload_to='profile_image', blank=True, null = True)
         gender = models.CharField(default='', blank=True, max_length=20)
         contact_information = models.CharField(null=True, blank= True, max_length=50)

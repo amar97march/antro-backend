@@ -10,4 +10,5 @@ app_name = 'profiles'
 urlpatterns = [
     path('profiles/', ProfileView.as_view(), name='profile'),
     path('search/', SearchProfileView.as_view(), name='search'),
+    path('my_profiles/', MyProfilesView.as_view(), name='my_profiles'),
 ]

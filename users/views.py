@@ -14,6 +14,7 @@ from .utils import send_verification_otp
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
 import datetime
+from profiles.models import Profile
 from rest_framework.permissions import IsAuthenticated, AllowAny
 # Create your views here.
 
@@ -157,3 +158,18 @@ class AddressBook(APIView):
         except Exception as e:
             print(e)
             return Response({'error': 'Error fetching '+ str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class AddAddressBookProfile(APIView):
+
+    permission_classes = [IsAuthenticated, ]
+
+    def post(self, request):
+        try:
+
+            profile_obj = Profile.objects.get(id = request.data['profile_id'])
+            obj, flag = AddressBookItem.objects.get_or_create(user = request.user, profile = profile_obj)
+            return Response({'message': "Profile added to address book"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print()
+            return Response({'error': 'Error adding address book item'}, status=status.HTTP_400_BAD_REQUEST)

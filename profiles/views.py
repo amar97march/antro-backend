@@ -61,7 +61,7 @@ class SearchProfileView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
-            queryset = Profile.objects.all().exclude(user=request.user).order_by('name')
+            queryset = Profile.objects.all().order_by('name')
             if request.data['location']:
                 longitude = request.data['location']['longitude']
                 latitude = request.data['location']['latitude']

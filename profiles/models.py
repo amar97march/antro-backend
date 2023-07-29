@@ -32,6 +32,8 @@ from users.models import User
 class Profile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
+    email = models.EmailField(max_length=254, default="")
+    phone = models.CharField(max_length=20, default="")
     designation = models.CharField(max_length=100, null=True, blank= True)
     company_name = models.CharField(max_length=100)
     company_sub_heading = models.CharField(max_length=100, null=True, blank= True)

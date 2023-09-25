@@ -3,7 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.dispatch import receiver
 from django.db.models.signals import post_save
-
+import uuid
 
 
 
@@ -34,6 +34,25 @@ PROFILE_CATEGORY = (
     ("Artificial Intelligence", "Artificial Intelligence"),
     ("Other", "Other")
 )
+
+class Organisation(models.Model):
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255, unique=True, verbose_name="Company Name")
+    logo = models.ImageField(upload_to="company_logos/", null=True, blank=True, verbose_name="Company Logo")
+    website = models.URLField(max_length=255, blank=True, verbose_name="Website")
+    description = models.TextField(blank=True, verbose_name="Description")
+    founded_year = models.PositiveIntegerField(null=True, blank=True, verbose_name="Founded Year")
+    headquarters = models.CharField(max_length=255, blank=True, verbose_name="Headquarters")
+    industry = models.CharField(max_length=255, blank=True, verbose_name="Industry")
+    employee_count = models.PositiveIntegerField(null=True, blank=True, verbose_name="Employee Count")
+    contact_email = models.EmailField(max_length=255, blank=True, verbose_name="Contact Email")
+    phone_number = models.CharField(max_length=20, blank=True, verbose_name="Phone Number")
+    social_media_links = models.JSONField(blank=True, null=True, verbose_name="Social Media Links")
+    initial_members_added = models.BooleanField(default=False)
+
+    def __str__(self):
+                return self.name
 
 class UserManager(BaseUserManager):
 
@@ -68,6 +87,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=254, null=True, blank=True)
     last_name = models.CharField(max_length=254, null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
+    organisation = models.ForeignKey(
+                Organisation, 
+                on_delete=models.CASCADE, 
+                blank=True, 
+                null=True
+      )
+    
     is_staff = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -95,6 +121,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
     else:
         instance.userprofile.save()
 
+from organisation.models import Branch
 class UserProfile(models.Model):
         user = models.OneToOneField(
                 User, 
@@ -104,6 +131,12 @@ class UserProfile(models.Model):
                 unique=True,
                 related_name='userprofile'
         )
+        branch = models.ForeignKey(
+                Branch, 
+                on_delete=models.CASCADE, 
+                blank=True, 
+                null=True
+      )
         bio = models.CharField(max_length=200, default='', blank=True)
         phone = models.CharField(blank=True, null=True, max_length=20)
         image = models.ImageField(upload_to='profile_image', blank=True, null = True)

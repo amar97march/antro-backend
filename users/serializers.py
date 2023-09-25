@@ -1,15 +1,16 @@
 from rest_framework import serializers
-from .models import User, UserProfile, AddressBookItem
-
-
-
+from .models import User, UserProfile, AddressBookItem, Organisation
 
 class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'date_of_birth']
-        read_only_fields = ['email']
+        fields = ['id','email', 'first_name', 'last_name', 'date_of_birth']
+        read_only_fields = ['email', 'id']
+
+    def create(self, validated_data):
+        print(validated_data)
+        return User.objects.create(**validated_data)
 
 class UserProfileSerializer(serializers.ModelSerializer):
 
@@ -80,3 +81,20 @@ class AddressBookItemSerializer(serializers.Serializer):
         representation["user"] = instance.user.email
         representation["profile"] = ProfileSerializer(instance.profile).data 
         return representation
+    
+class OrganisationSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Organisation
+        fields = ['id', 'name', 'logo', 'website', 'description', 'founded_year', 'headquarters', 'industry', 'employee_count','contact_email', 'phone_number', 'initial_members_added']
+        read_only_fields = ['id']
+
+    def create(self, validated_data):
+
+        return Organisation.objects.create(**validated_data)
+
+    def to_representation(self, data):
+        
+        data = super(OrganisationSerializer, self).to_representation(data)
+        data["logo"] = "http://localhost:8000"+ data["logo"]
+        return data

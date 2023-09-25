@@ -58,20 +58,27 @@ SIMPLE_JWT = {
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
+    'push_notifications',
+    'rest_framework',
     'users',
     'django.contrib.gis',
-    'profiles'
+    'profiles',
+    'chat',
+    'organisation',
 ]
 
-AUTH_USER_MODEL = 'users.User'
+# AUTH_USER_MODEL = 'users.models.User'
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -101,6 +108,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'antrobackend.wsgi.application'
+ASGI_APPLICATION = "antrobackend.asgi.application"
 
 
 # Database
@@ -115,27 +123,36 @@ WSGI_APPLICATION = 'antrobackend.wsgi.application'
 
 
 # Local
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': 'antrodb',
+        'USER': 'antro',
+        'PASSWORD': 'db@123456789',
+        'HOST': 'localhost',
+        'PORT': 5432,
+    }
+}
+
+# Server
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-#         'NAME': 'antrodb',
-#         'USER': 'antro',
-#         'PASSWORD': 'db@123456789',
+#         'NAME': 'antro',
+#         'USER': 'antrouser',
+#         'PASSWORD': 'Pass_1234',
 #         'HOST': 'localhost',
 #         'PORT': 5432,
 #     }
 # }
 
-# Server
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'antro',
-        'USER': 'antrouser',
-        'PASSWORD': 'Pass_1234',
-        'HOST': 'localhost',
-        'PORT': 5432,
-    }
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
 }
 
 
@@ -186,14 +203,59 @@ AUTH_PROFILE_MODULE = 'users.User'
 AUTH_USER_MODEL = 'users.User'
 
 
-GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.3/lib/libgdal.dylib"
-GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.1/lib/libgeos_c.dylib"
+# GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.3/lib/libgdal.dylib"
+# GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.1/lib/libgeos_c.dylib"
 
 # Local
-# GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.4_6/lib/libgdal.dylib"
-# GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.2/lib/libgeos_c.dylib"
+GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.4_6/lib/libgdal.dylib"
+GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.2/lib/libgeos_c.dylib"
 
 ALLOWED_HOSTS = ['*']
 
+# STATIC_URL = '/static/'
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, 'static/')
+# ]
+
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
+
+STATICFILES_DIR = {
+    os.path.join(BASE_DIR , "/public/static")
+}
+MEDIA_ROOT =  os.path.join(BASE_DIR, 'public/static') 
+MEDIA_URL = '/media/'
+
+
+# Push notification settings
+PUSH_NOTIFICATIONS_SETTINGS = {
+        "FCM_API_KEY": "55076c5c84c03dff248a0b3245c2a18c9057116c",
+        "GCM_API_KEY": "AIzaSyATLSjkTxT0HYOVv4FZ0L1-YagdVEU0UIQ",
+        "APNS_CERTIFICATE": "/path/to/your/certificate.pem",
+        "WP_POST_URL": {
+        "CHROME": "https://chrome.example.com",
+        "FIREFOX": "https://firefox.example.com",
+        # Other browsers and their URLs
+    },
+}
+
+ALLOWED_HOSTS = ["localhost:3000/","192.168.0.50"]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# CORS_ORIGIN_WHITELIST = (
+#     'http://localhost:3000',  # for localhost (REACT Default)
+#     'http://192.168.0.50:3000',  # for network 
+#     'http://localhost:8080',  # for localhost (Developlemt)
+#     'http://192.168.0.50:8080',  # for network (Development)
+# )
+
+# CSRF_TRUSTED_ORIGINS = [
+#     'http://localhost:3000',  # for localhost (REACT Default)
+#     'http://192.168.0.50:3000',  # for network 
+#     'http://localhost:8080',  # for localhost (Developlemt)
+#     'http://192.168.0.50:8080',  # for network (Development)
+# ]
+CORS_ORIGIN_ALLOW_ALL = True
+ALLOWED_HOSTS = ['*']

@@ -67,7 +67,6 @@ class ChatConsumer(WebsocketConsumer):
         # await self.accept()
 
     def disconnect(self, close_code):
-        print("AGAGAG")
         async_to_sync(self.channel_layer.group_discard)(
             self.room_group_name,
             self.channel_name
@@ -94,13 +93,11 @@ class ChatConsumer(WebsocketConsumer):
         #     })
 
     def send_message(self, message):
-        print("JAJJJJAAJ", message)
         
         self.send(text_data=json.dumps(message))
 
     def chat_message(self, event):
         message = event['message']
-        print("FFFFF", message)
         # device = WebPushDevice.objects.get(registration_id='3', active = True)
         # title = "Message Received"
         # message = "You've got mail"

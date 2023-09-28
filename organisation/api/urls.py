@@ -23,6 +23,6 @@ urlpatterns = [
     path('location_branches/<str:id>', LocationBranchesView.as_view()),
     path('branch/', BranchView.as_view()),
     path('send_broadcast/', SendBroadcast.as_view()),
-    path('get_user_excel/', GetUsersFormatExcel.as_view()),
+    path('get_user_excel/<str:id>/', GetUsersFormatExcel.as_view()),
     path('get_branch_broadcast_history/', BranchBroadcastHistoryView.as_view())
 ]

@@ -111,7 +111,6 @@ class BroadcastConsumer(WebsocketConsumer):
 
     def chat_message(self, event):
         message = event['message']
-        print("FFFFF", message)
         # device = WebPushDevice.objects.get(registration_id='3', active = True)
         # title = "Message Received"
         # message = "You've got mail"

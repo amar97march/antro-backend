@@ -30,7 +30,6 @@ class ChatSerializer(serializers.ModelSerializer):
     
     def to_representation(self, data):
         data = super(ChatSerializer, self).to_representation(data)
-        print(data, "ADATAT")
         request = self.context.get("request")
         if request and hasattr(request, "user"):
             user = request.user

@@ -209,14 +209,14 @@ class OrganisationMembersView(APIView):
 
 
 class GetUsersFormatExcel(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
-    def get(self, request):
+    def get(self, request, id):
 
         workbook = Workbook()
         sheet = workbook.active
 
-        drop_down_options = [f"{branch_obj.branch_name} ({branch_obj.id})" for branch_obj in  Branch.objects.filter(organisation = request.user.organisation)]
+        drop_down_options = [f"{branch_obj.branch_name} ({branch_obj.id})" for branch_obj in  Branch.objects.filter(organisation__id = id)]
         # Define column headers
         headers = ["First Name", "Last Name", "Email", "Date Of Birth", "Branch", "Phone", "Gender", "Education", "Experience"]
 

@@ -79,7 +79,6 @@ class LocationSerializer(serializers.ModelSerializer):
     def to_representation(self, data):
         data = super(LocationSerializer, self).to_representation(data)
         if data['level'] == '5':
-            print("AFAFAFA ", data['level'])
             branched_list = Branch.objects.filter(location__id = data['id'])
             data['branches'] = BranchSerializer(branched_list, many=True).data
             

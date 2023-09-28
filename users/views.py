@@ -238,6 +238,7 @@ class OrgansationView(APIView):
             group_obj.save()
             user_obj.organisation = organisation_obj
             user_obj.save()
+            location_obj = Location.objects.create(name = "Global", organisation = organisation_obj)
 
             return Response({"organisation": organisation_serializer_obj.data}, status=status.HTTP_201_CREATED)
         else:

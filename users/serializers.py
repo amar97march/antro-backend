@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import User, UserProfile, AddressBookItem, Organisation
+from .models import User, UserProfile, AddressBookItem, Organisation, DocumentCategory, Document
+from organisation.models import Branch
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -38,6 +39,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+    
+    
+    def to_representation(self, instance):
+        data = super(UserProfileSerializer, self).to_representation(instance)
+        # representation["user"] = instance.user.email
+        branch_obj = Branch.objects.filter(id = instance.branch.id).first()
+        if branch_obj:
+            print(data)
+            data["branch"] = branch_obj.branch_name
+        else:
+            data["branch"] = None
+        return data
 
 class RegistrationSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(style={"input_type": "password"}, write_only=True)
@@ -98,3 +111,35 @@ class OrganisationSerializer(serializers.ModelSerializer):
         data = super(OrganisationSerializer, self).to_representation(data)
         data["logo"] = "http://localhost:8000"+ data["logo"]
         return data
+    
+
+class DocumentCategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = DocumentCategory
+        fields = ('id', 'created_at', 'name') 
+
+class DocumentSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    file_size = serializers.SerializerMethodField()
+    file_name = serializers.SerializerMethodField()
+    file_extension = serializers.SerializerMethodField()
+
+    def get_file_size(self, obj):
+        if obj.file:
+            return obj.file.size
+        return None
+
+    def get_file_name(self, obj):
+        if obj.file:
+            return obj.file.name.split('/')[-1]  # Extract the file name from the full path
+        return None
+    
+    def get_file_extension(self, obj):
+        if obj.file:
+            return obj.file.name.split('.')[-1]  # Extract the file extension from the file name
+        return None
+    
+    class Meta:
+        model = Document
+        fields = ('category_name', 'id', 'created_at', 'category', 'user', 'verified_by_antro', 'verified_by_user', 'verified_by_organisation', 'file', 'file_size', 'file_name', 'file_extension')

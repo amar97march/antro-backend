@@ -1,13 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import render, get_object_or_404
-from .models import Group
+from .models import Group, BroadcastMessage
 
 User = get_user_model()
 
 
 def get_last_10_messages(groupId):
     group = get_object_or_404(Group, id=groupId)
-    print("Geoup is ", group)
     return group.messages.order_by('-timestamp').all()[:10]
 
 def get_group_details(groupId):
@@ -34,7 +33,12 @@ def broadcast_to_sub_groups(groupId, message):
     child_groups = get_all_sub_groups(group)
     print(child_groups)
     for group_obj in child_groups:
-        group_obj.messages.add(message)
+        message_obj = BroadcastMessage.objects.create(
+            user=message.user,
+            combine_id = message.combine_id,
+            content=message.content
+        )
+        group_obj.messages.add(message_obj)
         group_obj.save()
     
 

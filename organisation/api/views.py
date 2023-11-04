@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from organisation.models import Group, Organisation, Location, Branch, BranchBroadcastHistory
+from organisation.models import Group, Organisation, Location, Branch, BranchBroadcastHistory, GroupParticipants, BroadcastMessage
 from rest_framework.views import APIView
 from chat.models import Chat, Contact
 from chat.views import get_user_contact
@@ -12,7 +12,7 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from openpyxl.worksheet.datavalidation import DataValidation
-from ..utils import broadcast_to_branches_by_list
+from ..utils import broadcast_to_branches_by_list, is_admin_of_group_or_parent, get_messages_of_group_and_children
 
 User = get_user_model()
 
@@ -34,7 +34,7 @@ class BroadcastView(APIView):
         parent_id = request.query_params.get('parent_id', None)
 
         group_list = Group.objects.filter(organisation = request.user.organisation, parent__id = parent_id)
-        serializer_data = GroupSerializer(group_list, many=True)
+        serializer_data = GroupSerializer(group_list, many=True, context={'request': request})
         return Response({
             "status": 200,
             'message': 'Records found',
@@ -154,7 +154,27 @@ class BranchView(APIView):
         except Exception as e:
             return Response({'data': 'Record not found'}, status=status.HTTP_400_BAD_REQUEST)
 
+class UpdatePermissions(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request):
+        data = request.data.get('data', [])
+        group_id = request.data.get('group_id', None)
+        group_obj = Group.objects.get(id = group_id)
+        if not is_admin_of_group_or_parent(request.user, group_obj):
+            return Response({'error': 'Not admin'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        for participant in data:
+            user = User.objects.filter(id = participant["id"]).first()
+            if user:
+                group_participant_obj = GroupParticipants.objects.get(group = group_obj, user = user)
+                group_participant_obj.sender = participant["sender"]
+                group_participant_obj.admin = participant["admin"]
+                group_participant_obj.save()
+        return Response({
+            "status": 200,
+            'message': 'Permission updated',
+            })
 
 class ParticipantView(APIView):
     permission_classes = [IsAuthenticated]
@@ -173,6 +193,24 @@ class ParticipantView(APIView):
             "status": 200,
             'message': 'Participants Added',
             })
+    
+    def delete(self, request):
+        partipants_list = request.data.get('participants', [])
+        group_id = request.data.get('group_id', None)
+        group_obj = Group.objects.get(id = group_id)
+        if not is_admin_of_group_or_parent(request.user, group_obj):
+            return Response({'error': 'Not admin'}, status=status.HTTP_400_BAD_REQUEST)
+        for participant_id in partipants_list:
+            user = User.objects.get(id = participant_id)
+            
+            group_participant_obj = GroupParticipants.objects.filter(group = group_obj, user = user).first()
+            if group_participant_obj:
+
+                group_participant_obj.delete()
+        return Response({
+            "status": 200,
+            'message': 'Participants removed',
+            })
         
 
 class MyGroup(APIView):
@@ -183,12 +221,49 @@ class MyGroup(APIView):
         group_list = request.user.broadcast_groups.all()
         for grou in group_list:
             print(grou.participants)
-        serializer_data = GroupSerializer(group_list, many=True)
+        serializer_data = GroupSerializer(group_list, many=True, context={'request': request})
         return Response({
             "status": 200,
             'message': 'Records found',
             'data': serializer_data.data
             })
+    
+class GroupDetails(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, group_id):
+
+        group_obj = Group.objects.get(id = group_id)
+        serializer_data = GroupSerializer(group_obj, context={'request': request})
+        return Response({
+            "status": 200,
+            'message': 'Records found',
+            'data': serializer_data.data
+            })
+    
+class UpdateGroupMessage(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            message_id = request.data.get('message_id', None)
+            group_id = request.data.get('group_id', None)
+            content = request.data.get('content', None)
+
+            message_list = get_messages_of_group_and_children(group_id, message_id)
+            for message in message_list:
+                message_obj = BroadcastMessage.objects.get(id = message.id)
+                message_obj.content = content
+                message_obj.edited = True
+                message_obj.save()
+
+            return Response({
+                "status": 200,
+                'message': 'Message Updated',
+                })
+        except Exception as e:
+            print(e)
+            return Response({'error': 'Not updated'}, status=status.HTTP_400_BAD_REQUEST)
     
 class OrganisationMembersView(APIView):
     permission_classes = [IsAuthenticated]

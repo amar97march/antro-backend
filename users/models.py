@@ -97,6 +97,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    active = models.BooleanField(default=True)
+    verified_by_antro = models.BooleanField(default=False)
+    verified_by_user = models.BooleanField(default=False)
+    verified_by_organisation = models.BooleanField(default=False)
     last_login = models.DateTimeField(null=True, blank=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     
@@ -151,6 +155,7 @@ class UserProfile(models.Model):
         conference_event = models.CharField(null=True, blank= True, max_length=1000)
         languages = models.CharField(null=True, blank= True, max_length=1000)
         projects = models.CharField(null=True, blank= True, max_length=1000)
+        active = models.BooleanField(default=True)
         def __str__(self):
                 return self.user.email
         
@@ -198,3 +203,22 @@ class AddressBookItem(models.Model):
 
      def __str__(self):
          return self.user.email
+     
+class DocumentCategory(models.Model):
+    name =  models.CharField(max_length=100, blank=False, null=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name}"
+     
+class Document(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    category = models.ForeignKey(DocumentCategory, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    verified_by_antro = models.BooleanField(default=False)
+    verified_by_user = models.BooleanField(default=False)
+    verified_by_organisation = models.BooleanField(default=False)
+    file = models.FileField(upload_to='documents/')
+
+    def __str__(self):
+        return f"{self.user.email} - {self.category.name}"

@@ -47,7 +47,6 @@ class Profile(models.Model):
     contact_number_1 = models.CharField(null=True, blank= True, max_length=50)
     contact_number_2 = models.CharField(null=True, blank= True, max_length=50)
     website = models.URLField(null=True, blank= True)
-    email = models.EmailField(null=True, blank= True)
     profession = models.CharField(max_length=100)
     keywords = models.ManyToManyField(Keyword)
 

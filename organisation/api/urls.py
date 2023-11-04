@@ -10,14 +10,20 @@ from .views import (
     GetUsersFormatExcel,
     LocationBranchesView,
     SendBroadcast,
-BranchBroadcastHistoryView)
+    BranchBroadcastHistoryView,
+    UpdatePermissions,
+    GroupDetails,
+    UpdateGroupMessage)
 
 app_name = 'broadcast'
 
 urlpatterns = [
     path('', BroadcastView.as_view()),
     path('my_groups/', MyGroup.as_view()),
+    path('group_details/<str:group_id>', GroupDetails.as_view()),
+    path('update_group_message/', UpdateGroupMessage.as_view()),
     path('participant/', ParticipantView.as_view()),
+    path('update_permissions/', UpdatePermissions.as_view()),
     path('organisation_members/', OrganisationMembersView.as_view()),
     path('locations/', LocationView.as_view()),
     path('location_branches/<str:id>', LocationBranchesView.as_view()),

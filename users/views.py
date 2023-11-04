@@ -2,14 +2,16 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import  Response
 from rest_framework.views import APIView
 from .utils import get_tokens_for_user
-from users.models import User, PhoneVerification, UserProfile, RequestData, AddressBookItem
+from rest_framework_simplejwt.tokens import OutstandingToken
+from users.models import User, PhoneVerification, UserProfile, RequestData, AddressBookItem,\
+Document, DocumentCategory
 from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer, \
-AddressBookItemSerializer, OrganisationSerializer
+AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer
 from .utils import send_verification_otp
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
@@ -42,6 +44,7 @@ class UserData(APIView):
             user_obj = User.objects.get(id = request.user.id)
             organisation_serializer_obj = OrganisationSerializer(user_obj.organisation)
             data = {
+                "id": user_obj.id,
                 "first_name": user_obj.first_name,
                 "last_name": user_obj.last_name,
                 "email": user_obj.email,
@@ -74,6 +77,8 @@ class LoginView(APIView):
         user = authenticate(request, email=email, password=password)
 
         if user is not None:
+            if not user.active:
+                return Response({'data': 'Invalid Credentialfs' + str(user.active)}, status=status.HTTP_401_UNAUTHORIZED)
             login(request, user)
             auth_data = get_tokens_for_user(request.user)
             phone_obj = PhoneVerification.objects.get(user = user)
@@ -84,7 +89,8 @@ class LoginView(APIView):
             auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
                                       "email": email,
                                       "first_name": user.first_name,
-                                      "last_name": user.last_name
+                                      "last_name": user.last_name,
+                                      "id": user.id
                                       }
         #     WebPushDevice.objects.create(
         #         registration_id=user.id,
@@ -94,7 +100,7 @@ class LoginView(APIView):
         #         user=request.user,
         # )
             return Response({'data': 'Login Success', **auth_data}, status=status.HTTP_200_OK)
-        return Response({'data': 'Invalid Credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({'data': 'Invalid Credentialsf'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class SendOTP(APIView):
@@ -310,3 +316,89 @@ class CreateMembersView(APIView):
 
         return Response({"status": "Members added",
                              "members_not_added": not_added_list}, status=status.HTTP_201_CREATED)
+    
+
+
+class DocumentUpload(APIView):
+    def post(self, request, format=None):
+        # Check if the user is authenticated
+        if not request.user.is_authenticated:
+            return Response({"error": "User is not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Extract data from the request
+        category_id = request.data.get('category_id')
+        file = request.data.get('file')
+
+        # Validate category_id and get the category
+        try:
+            category = DocumentCategory.objects.get(pk=category_id)
+        except DocumentCategory.DoesNotExist:
+            return Response({"error": "Category does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Create a new document
+        user = request.user
+        document = Document(category=category, user=user, file=file)
+
+        # Save the document
+        document.save()
+
+        # Serialize the document
+        serializer = DocumentSerializer(document)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+class DocumentCategoryView(APIView):
+    
+    def get(self, request):
+        data = DocumentCategory.objects.all()
+        serializer_obj = DocumentCategorySerializer(data, many = True)
+        return Response({'data': serializer_obj.data}, status=status.HTTP_200_OK)
+    
+
+class DocumentList(generics.ListAPIView):
+    serializer_class = DocumentSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return Document.objects.filter(user=user)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        
+        # Create a dictionary to group documents by category name
+        categorized_documents = {}
+        for doc in serializer.data:
+            category_name = doc['category_name']
+            if category_name not in categorized_documents:
+                categorized_documents[category_name] = []
+            categorized_documents[category_name].append(doc)
+        
+        return Response(categorized_documents, status=status.HTTP_200_OK)
+    
+
+class DeactivateUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Set is_active to False for the user
+        request.user.active = False
+        request.user.save()
+        user = request.user
+
+        # Log out the user by blacklisting all existing tokens
+       
+        # outstanding_tokens = OutstandingToken.objects.filter(
+        #     user=user)
+        # for token in outstanding_tokens:
+        #     print(token.__dict__)
+        #     token.blacklisted = True
+        #     token.save()
+
+        # Update related tables where the user is used as a foreign key
+        # For example, if UserProfile has a foreign key to User:
+        UserProfile.objects.filter(user=request.user).update(active=False)
+
+        # You can add more related models and update them similarly
+
+        return Response({"message": "User deactivated and logged out from all devices."}, status=status.HTTP_200_OK)

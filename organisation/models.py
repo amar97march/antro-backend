@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from users.models import Organisation
 
 import uuid
+import json
 
 User = get_user_model()
 
@@ -36,6 +37,8 @@ class BroadcastMessage(models.Model):
     user = models.ForeignKey(
         User, related_name='messages', on_delete=models.CASCADE)
     content = models.TextField()
+    combine_id = models.CharField(max_length=500, null=False, blank=False)
+    edited = models.BooleanField(default=False)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -56,15 +59,48 @@ class Group(CompanyBaseModel):
     parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=100, null=False, blank=False)
     participants = models.ManyToManyField(
-        User, related_name='broadcast_groups', blank=True)
-    messages = models.ManyToManyField(BroadcastMessage, blank=True)
+        User, through='GroupParticipants', related_name='broadcast_groups', blank=True)
+    messages = models.ManyToManyField(BroadcastMessage, blank=True, related_name='group')
     level = models.CharField(max_length=50,
                               choices=Level.choices,
                               default=Level.Global)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def get_parent_hierarchy(self):
+        hierarchy = []
+
+        current_group = self
+        while current_group:
+            hierarchy.append({
+                'level': int(current_group.level),
+                'parentId': str(current_group.parent.id) if current_group.parent else None,
+                'name': current_group.name
+            })
+
+            current_group = current_group.parent
+
+        return hierarchy
+
+    def parent_hierarchy_as_json(self):
+        hierarchy = self.get_parent_hierarchy()
+        sorted_data = sorted(hierarchy, key=lambda x: x['level'])
+        return sorted_data
+
     def __str__(self):
         return self.name
+    
+class GroupParticipants(models.Model):
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    sender = models.BooleanField(default=False)
+    admin = models.BooleanField(default=False)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('group', 'user')
+
+    def __str__(self):
+        return self.group.name + " - " + self.user.email
 
 
 class Location(CompanyBaseModel):

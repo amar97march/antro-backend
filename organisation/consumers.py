@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer, AsyncWebsocketConsumer
 import json
+import uuid
 from .models import BroadcastMessage
 from push_notifications.models import WebPushDevice
 from .views import get_last_10_messages, get_group_details, get_user_contact, get_current_chat, broadcast_to_sub_groups
@@ -32,6 +33,7 @@ class BroadcastConsumer(WebsocketConsumer):
         user_contact = get_user_contact(data['from'])
         message = BroadcastMessage.objects.create(
             user=user_contact,
+            combine_id = str(uuid.uuid4()) + "-"+ str(uuid.uuid4()),
             content=data['message'])
         current_chat = get_current_chat(self.scope['url_route']['kwargs']['broadcast_id'])
         broadcast_to_sub_groups(current_chat.id, message)
@@ -44,7 +46,6 @@ class BroadcastConsumer(WebsocketConsumer):
         return self.send_chat_message(content)
 
     def messages_to_json(self, messages):
-        print("Message :", messages)
         result = []
         for message in messages:
             result.append(self.message_to_json(message))
@@ -55,6 +56,7 @@ class BroadcastConsumer(WebsocketConsumer):
             'id': message.id,
             'author': message.user.email,
             'content': message.content,
+            'edited': message.edited, 
             'timestamp': str(message.timestamp)
         }
 
@@ -105,7 +107,6 @@ class BroadcastConsumer(WebsocketConsumer):
         #     })
 
     def send_message(self, message):
-        print("JAJJJJAAJ", message)
         
         self.send(text_data=json.dumps(message))
 

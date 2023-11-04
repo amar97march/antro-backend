@@ -4,7 +4,8 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from django.core.exceptions import ValidationError
 from django import forms
-from .models import User, UserProfile, PhoneVerification, RequestData, AddressBookItem
+from .models import User, UserProfile, PhoneVerification, RequestData, AddressBookItem, \
+Document, DocumentCategory
 
 
 class UserCreationForm(forms.ModelForm):
@@ -37,7 +38,7 @@ class UserChangeForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ('email', 'password', 'date_of_birth', 'is_active', 'is_admin')
+        fields = ('email', 'password', 'date_of_birth', 'is_active', 'is_admin', 'active')
 
     def clean_password(self):
         return self.initial["password"]
@@ -52,7 +53,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('Personal info', {'fields': ('date_of_birth', 'first_name', 'last_name', 'organisation',)}),
-        ('Permissions', {'fields': ('is_admin','is_staff',)}),
+        ('Permissions', {'fields': ('is_admin','is_staff', 'active')}),
     )
     add_fieldsets = (
         (None, {
@@ -70,3 +71,5 @@ admin.site.register(UserProfile)
 admin.site.register(PhoneVerification)
 admin.site.register(RequestData)
 admin.site.register(AddressBookItem)
+admin.site.register(DocumentCategory)
+admin.site.register(Document)

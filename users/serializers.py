@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, UserProfile, AddressBookItem, Organisation, DocumentCategory, Document
+from .models import User, UserProfile, AddressBookItem, Organisation, DocumentCategory, Document, OnboardingLink
 from organisation.models import Branch
 
 class UserSerializer(serializers.ModelSerializer):
@@ -143,3 +143,8 @@ class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = ('category_name', 'id', 'created_at', 'category', 'user', 'verified_by_antro', 'verified_by_user', 'verified_by_organisation', 'file', 'file_size', 'file_name', 'file_extension')
+
+class OnboardingLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OnboardingLink
+        fields = ('secret',)

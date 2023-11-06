@@ -3,13 +3,13 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from rest_framework import status, generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import  Response
 from rest_framework.views import APIView
 from .utils import get_tokens_for_user
 from rest_framework_simplejwt.tokens import OutstandingToken
 from users.models import User, PhoneVerification, UserProfile, RequestData, AddressBookItem,\
-Document, DocumentCategory
+Document, DocumentCategory, OnboardingLink
 from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer, \
 AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer
 from .utils import send_verification_otp
@@ -17,11 +17,12 @@ from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
 import json
 import datetime
+import uuid
 from profiles.models import Profile
 from organisation.models import Group, Branch, Location
-from rest_framework.permissions import IsAuthenticated, AllowAny
 from push_notifications.models import WebPushDevice
 import re
+from users.utils import send_notification
 
 
 class RegistrationView(APIView):
@@ -295,7 +296,8 @@ class CreateMembersView(APIView):
                                                    email = user_obj_dict["Email"],
                                                    password = "klfashglakfihifiaeknf",
                                                    organisation = request.user.organisation,
-                                                   date_of_birth = target_date
+                                                   date_of_birth = target_date,
+                                                   onboarding_complete = False
                                                    )
                 user_profile_obj = UserProfile.objects.get(user = new_user_obj)
                 user_profile_obj.phone = user_obj_dict['Phone']
@@ -304,6 +306,13 @@ class CreateMembersView(APIView):
                 user_profile_obj.Experience = user_obj_dict['Experience']
                 user_profile_obj.branch = branchObj
                 user_profile_obj.save()
+                link_uuid = uuid.uuid4()
+                onboard_obj = OnboardingLink.objects.create(user = new_user_obj, secret = link_uuid, link_to_email = user_obj_dict["Email"])
+                email_data = {
+                    "receiver_name": user_obj_dict["First Name"],
+                    "link": f"http://localhost:8000/new_onboard_link/{onboard_obj.secret}/"
+                }
+                send_notification([user_obj_dict["Email"]], "new_onboard", email_data)
 
             else:
                 not_added_list.append({
@@ -311,7 +320,7 @@ class CreateMembersView(APIView):
                     "error": "User already present"
                 })
             organisation_obj = request.user.organisation
-            organisation_obj.initial_members_added = True
+            # organisation_obj.initial_members_added = True
             organisation_obj.save()
 
         return Response({"status": "Members added",
@@ -320,6 +329,9 @@ class CreateMembersView(APIView):
 
 
 class DocumentUpload(APIView):
+
+    permission_classes = [IsAuthenticated]
+
     def post(self, request, format=None):
         # Check if the user is authenticated
         if not request.user.is_authenticated:
@@ -346,6 +358,23 @@ class DocumentUpload(APIView):
         serializer = DocumentSerializer(document)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class DocumentDelete(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request, document_id, format=None):
+        try:
+            document = Document.objects.get(pk=document_id)
+        except Document.DoesNotExist:
+            return Response({"error": "Document does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if the user is the owner of the document
+        if document.user != request.user:
+            return Response({"error": "You are not the owner of this document"}, status=status.HTTP_403_FORBIDDEN)
+
+        document.active = False
+        document.save()
+        return Response({"message": "Document deleted successfully"}, status=status.HTTP_200_OK)
     
 class DocumentCategoryView(APIView):
     
@@ -360,7 +389,7 @@ class DocumentList(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Document.objects.filter(user=user)
+        return Document.objects.filter(user=user, active = True)
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -402,3 +431,30 @@ class DeactivateUserView(APIView):
         # You can add more related models and update them similarly
 
         return Response({"message": "User deactivated and logged out from all devices."}, status=status.HTTP_200_OK)
+    
+
+class GetUserBySecret(APIView):
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, secret, format=None):
+        try:
+            # Retrieve the OnboardingLink object with the provided secret
+            onboarding_link = OnboardingLink.objects.get(secret=secret)
+
+            # Retrieve the associated user
+            user = User.objects.filter(email = onboarding_link.link_to_email).first()
+            if user:
+                # You can serialize the user data here if needed
+                user_data = {
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "organisation": user.organisation.name if user.organisation else None,
+                }
+
+                return Response(user_data, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": "Onboarding link not found"}, status=status.HTTP_404_NOT_FOUND)

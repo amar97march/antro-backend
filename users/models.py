@@ -103,6 +103,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     verified_by_organisation = models.BooleanField(default=False)
     last_login = models.DateTimeField(null=True, blank=True)
     date_joined = models.DateTimeField(auto_now_add=True)
+    onboarding_complete = models.BooleanField(default=True)
     
 
     USERNAME_FIELD = 'email'
@@ -206,6 +207,7 @@ class AddressBookItem(models.Model):
      
 class DocumentCategory(models.Model):
     name =  models.CharField(max_length=100, blank=False, null=False, unique=True)
+    active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -219,6 +221,15 @@ class Document(models.Model):
     verified_by_user = models.BooleanField(default=False)
     verified_by_organisation = models.BooleanField(default=False)
     file = models.FileField(upload_to='documents/')
+    active = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.user.email} - {self.category.name}"
+    
+class OnboardingLink(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    secret =  models.UUIDField(unique=True, blank = False, null = False)
+    link_to_email = models.EmailField(max_length=255, null = False, blank=False, verbose_name="Link Email")
+
+    def __str__(self):
+        return f"{self.user.email}"

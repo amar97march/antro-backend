@@ -23,6 +23,8 @@ urlpatterns = [
     path('add_address_book_profile/', AddAddressBookProfile.as_view(), name='add_address_book_profile'),
     path('documents/', DocumentList.as_view(), name='document-list'),
     path('document_upload/', DocumentUpload.as_view(), name="Document Upload"),
+    path('document_delete/<int:document_id>/', DocumentDelete.as_view(), name="Document Upload"),
     path('document_categories/', DocumentCategoryView.as_view(), name="document categories"),
     path('deactivate-user/', DeactivateUserView.as_view(), name='deactivate-user'),
+    path('get-user-by-secret/<str:secret>/', GetUserBySecret.as_view(), name='get-user-by-secret'),
 ]

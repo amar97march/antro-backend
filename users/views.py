@@ -9,13 +9,14 @@ from rest_framework.views import APIView
 from .utils import get_tokens_for_user
 from rest_framework_simplejwt.tokens import OutstandingToken
 from users.models import User, PhoneVerification, UserProfile, RequestData, AddressBookItem,\
-Document, DocumentCategory, OnboardingLink
+Document, DocumentCategory, OnboardingLink, EmailVerification, ResetPasswordVerification, TempUser , TempUserProfile
 from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer, \
 AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer
-from .utils import send_verification_otp
+from .utils import send_verification_otp, send_reset_password_otp
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
 import json
+import random
 import datetime
 import uuid
 from profiles.models import Profile
@@ -80,11 +81,15 @@ class LoginView(APIView):
         if user is not None:
             if not user.active:
                 return Response({'data': 'Invalid Credentialfs' + str(user.active)}, status=status.HTTP_401_UNAUTHORIZED)
+            # phone_obj = PhoneVerification.objects.get(user = user)
+            email_obj = EmailVerification.objects.get(user = user)
+            if(not email_obj.verified):
+                return Response({'data': 'Email not verified'}, status=status.HTTP_401_UNAUTHORIZED)
             login(request, user)
             auth_data = get_tokens_for_user(request.user)
-            phone_obj = PhoneVerification.objects.get(user = user)
-            print(auth_data, user, phone_obj.verified)
-            auth_data["verified"] = phone_obj.verified
+            
+            print(auth_data, user, email_obj.verified)
+            auth_data["verified"] = email_obj.verified
             auth_data["is_staff"] = user.is_staff
             organisation_serializer_obj = OrganisationSerializer(user.organisation)
             auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
@@ -101,7 +106,7 @@ class LoginView(APIView):
         #         user=request.user,
         # )
             return Response({'data': 'Login Success', **auth_data}, status=status.HTTP_200_OK)
-        return Response({'data': 'Invalid Credentialsf'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({'data': 'Invalid Credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class SendOTP(APIView):
@@ -129,19 +134,55 @@ class SendOTP(APIView):
 
 class VerifyOTP(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         otp = request.data.get('otp')
-        user = request.user
-        phone_obj = PhoneVerification.objects.get(user = user)
-        if phone_obj.otp == otp and (((datetime.datetime.utcnow().replace(tzinfo=utc) -  phone_obj.verification_time).total_seconds()/60) < 30) :
-            phone_obj.verified = True
-            phone_obj.save()
-            return Response({'data': 'Account verified'}, status=status.HTTP_200_OK)
-        else:
-            return Response({'data': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        verification_type = request.data.get('type')
+        email = request.data.get('email')
+        new_password = request.data.get('new_password')
 
+        try:
+            user = User.objects.get(email = email)
+            if (verification_type == "phone"):
+
+                phone_obj = PhoneVerification.objects.get(user = user)
+                if phone_obj.otp == otp and (((datetime.datetime.utcnow().replace(tzinfo=utc) -  phone_obj.verification_time).total_seconds()/60) < 30) :
+                    phone_obj.verified = True
+                    phone_obj.save()
+                    return Response({'data': 'Account verified'}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'data': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+            elif (verification_type == "email"):
+                email_obj = EmailVerification.objects.get(user = user, verified = False)
+                print("ASF: ", email_obj.verification_time, datetime.datetime.utcnow().replace(tzinfo=utc))
+                if email_obj.verification_time > datetime.datetime.utcnow().replace(tzinfo=utc) and email_obj.otp == int(otp):
+                    email_obj.verified = True
+                    email_obj.otp = None
+                    email_obj.save()
+                    return Response({'data': 'Email verified'}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'error': 'Invalid or expired otp'}, status=status.HTTP_400_BAD_REQUEST)
+            elif (verification_type == "reset_password"):
+                reset_password_obj = ResetPasswordVerification.objects.get(user = user)
+                print("ASF: ", reset_password_obj.verification_time, datetime.datetime.utcnow().replace(tzinfo=utc))
+                if reset_password_obj.verification_time > datetime.datetime.utcnow().replace(tzinfo=utc) and reset_password_obj.otp == int(otp):
+                    reset_password_obj.updated = True
+                    reset_password_obj.otp = None
+                    reset_password_obj.save()
+                    user.set_password(new_password)
+                    user.save()
+
+                    return Response({'data': 'Password resetted'}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'error': 'Invalid or expired otp'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            else:
+                return Response({'error': 'Invalid type'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(e)
+            return Response({'error': 'Invalid Request'}, status=status.HTTP_400_BAD_REQUEST)
+        
 
 class LogoutView(APIView):
     def post(self, request):
@@ -158,6 +199,27 @@ class ChangePasswordView(APIView):
         request.user.set_password(serializer.validated_data['new_password'])
         request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class ResetPasswordRequest(APIView):
+
+    permission_classes = [AllowAny, ]
+
+    def post(self, request):
+        email = request.data.get('email')
+        try:
+            user_obj = User.objects.get(email = email)
+            reset_obj, created = ResetPasswordVerification.objects.get_or_create(user = user_obj)
+            reset_obj.otp = random.randint(100000, 999999)
+            reset_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
+            send_reset_password_otp(user_obj.email, reset_obj.otp)
+            reset_obj.save()
+            return Response({'data': 'Reset OTP sent'}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(e)
+            return Response({'request_id':id, 'response_data': 'Invalid request id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+
 
 class GetData(APIView):
     permission_classes = [IsAuthenticated, ]
@@ -291,15 +353,14 @@ class CreateMembersView(APIView):
                 reference_date = datetime.datetime(1900, 1, 1)
                 target_date = reference_date + datetime.timedelta(days=user_obj_dict['Date Of Birth'])
                 pass
-                new_user_obj = User.objects.create(first_name = user_obj_dict["First Name"],
+                new_user_obj = TempUser.objects.create(first_name = user_obj_dict["First Name"],
                                                    last_name = user_obj_dict["Last Name"],
                                                    email = user_obj_dict["Email"],
-                                                   password = "klfashglakfihifiaeknf",
                                                    organisation = request.user.organisation,
                                                    date_of_birth = target_date,
                                                    onboarding_complete = False
                                                    )
-                user_profile_obj = UserProfile.objects.get(user = new_user_obj)
+                user_profile_obj = TempUserProfile.objects.create(user = new_user_obj)
                 user_profile_obj.phone = user_obj_dict['Phone']
                 user_profile_obj.gender = user_obj_dict['Gender']
                 user_profile_obj.Education = user_obj_dict['Education']
@@ -455,6 +516,36 @@ class GetUserBySecret(APIView):
 
                 return Response(user_data, status=status.HTTP_200_OK)
             else:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": "User not found",
+                                 "email": onboarding_link.link_to_email}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": "Onboarding link not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+    
+class AddUserBySecret(APIView):
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, format=None):
+        try:
+            merge_type = request.data.get('type') # new or existing 
+            secret = request.data.get('secret')
+            # Retrieve the OnboardingLink object with the provided secret
+            if (merge_type == 'new'):
+                password = request.data.get('password')
+                onboarding_link = OnboardingLink.objects.get(secret=secret)
+                cor_user_obj = User.objects.get(id = onboarding_link.user.id)
+                cor_user_obj.onboarding_complete = True
+                cor_user_obj.set_password(password)
+                cor_user_obj.save()
+
+                onboarding_link = OnboardingLink.objects.get(secret=secret)
+
+                # Retrieve the associated user
+            elif (merge_type == 'old'):
+
+                password = request.data.get('password')
+                onboarding_link = OnboardingLink.objects.get(secret=secret)
+
         except Exception as e:
             return Response({"error": "Onboarding link not found"}, status=status.HTTP_404_NOT_FOUND)

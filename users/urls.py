@@ -15,8 +15,9 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='register'),
     path('profile/', UserProfileView.as_view(), name='user_profile'),
     path('send-otp/', SendOTP.as_view(), name='register'),
-    path('verify-otp/', VerifyOTP.as_view(), name='register'),
+    path('verify-account-otp/', VerifyOTP.as_view(), name='register'),
     path('change-password/', ChangePasswordView.as_view(), name='register'),
+    path('reset-password-request/', ResetPasswordRequest.as_view(), name='reset-password-request'),
     path('token-refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('get_data/<str:id>/', GetData.as_view(), name='get_data'),
     path('address_book/', AddressBook.as_view(), name='address_book'),
@@ -27,4 +28,5 @@ urlpatterns = [
     path('document_categories/', DocumentCategoryView.as_view(), name="document categories"),
     path('deactivate-user/', DeactivateUserView.as_view(), name='deactivate-user'),
     path('get-user-by-secret/<str:secret>/', GetUserBySecret.as_view(), name='get-user-by-secret'),
+    path('add-user-by-secret/', AddUserBySecret.as_view(), name='add-user-by-secret')
 ]

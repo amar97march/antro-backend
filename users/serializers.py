@@ -1,6 +1,11 @@
 from rest_framework import serializers
-from .models import User, UserProfile, AddressBookItem, Organisation, DocumentCategory, Document, OnboardingLink
+from .models import User, UserProfile, AddressBookItem, Organisation, DocumentCategory, Document, OnboardingLink,\
+EmailVerification
 from organisation.models import Branch
+import random
+from users.utils import send_email_verification_otp
+from datetime import datetime, timedelta
+
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -12,6 +17,13 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         print(validated_data)
         return User.objects.create(**validated_data)
+    
+class TempUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['id','email', 'first_name', 'last_name', 'date_of_birth']
+        read_only_fields = ['email', 'id']
 
 class UserProfileSerializer(serializers.ModelSerializer):
 
@@ -44,12 +56,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super(UserProfileSerializer, self).to_representation(instance)
         # representation["user"] = instance.user.email
-        branch_obj = Branch.objects.filter(id = instance.branch.id).first()
-        if branch_obj:
-            print(data)
-            data["branch"] = branch_obj.branch_name
+        if (instance.branch):
+            branch_obj = Branch.objects.filter(id = instance.branch.id).first()
+            if branch_obj:
+                print(data)
+                data["branch"] = branch_obj.branch_name
+            else:
+                data["branch"] = None
         else:
-            data["branch"] = None
+                data["branch"] = None
         return data
 
 class RegistrationSerializer(serializers.ModelSerializer):
@@ -70,6 +85,11 @@ class RegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'password': 'Passwords must match.'})
         user.set_password(password)
         user.save()
+        email_obj = EmailVerification.objects.get(user = user)
+        email_obj.otp = random.randint(100000, 999999)
+        email_obj.verification_time = datetime.now() + timedelta(minutes=2)
+        email_obj.save()
+        send_email_verification_otp(user.email, email_obj.otp)
         return user
 
 

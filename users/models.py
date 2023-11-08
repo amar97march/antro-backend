@@ -123,8 +123,31 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
         PhoneVerification.objects.create(user=instance)
+        EmailVerification.objects.create(user=instance)
     else:
         instance.userprofile.save()
+
+class TempUser(models.Model):
+    email = models.EmailField(max_length=254, unique=True)
+    first_name = models.CharField(max_length=254, null=True, blank=True)
+    last_name = models.CharField(max_length=254, null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    organisation = models.ForeignKey(
+                Organisation, 
+                on_delete=models.CASCADE, 
+                blank=True, 
+                null=True
+      )
+    active = models.BooleanField(default=True)
+    onboarding_complete = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.email
+
+    class Meta:
+        unique_together = ('email', 'organisation',)
+
+        
 
 from organisation.models import Branch
 class UserProfile(models.Model):
@@ -157,8 +180,41 @@ class UserProfile(models.Model):
         languages = models.CharField(null=True, blank= True, max_length=1000)
         projects = models.CharField(null=True, blank= True, max_length=1000)
         active = models.BooleanField(default=True)
+        coporate = models.BooleanField(default=False)
         def __str__(self):
                 return self.user.email
+        
+class TempUserProfile(models.Model):
+    user = models.OneToOneField(
+            TempUser, 
+            on_delete=models.CASCADE, 
+            blank=True, 
+            null=True, 
+            unique=True,
+            related_name='tempuserprofile'
+    )
+    branch = models.ForeignKey(
+            Branch, 
+            on_delete=models.CASCADE, 
+            blank=True, 
+            null=True
+    )
+    bio = models.CharField(max_length=200, default='', blank=True)
+    gender = models.CharField(default='', blank=True, max_length=20)
+    contact_information = models.CharField(null=True, blank= True, max_length=50)
+    Education: models.CharField(null=True, blank= True, max_length=50)
+    Experience: models.FloatField(null=True, blank= True)
+    Skills: models.CharField(null=True, blank= True, max_length=1000)
+    Certifications: models.CharField(null=True, blank= True, max_length=1000)
+    awards_recognitions = models.CharField(null=True, blank= True, max_length=1000)
+    personal_website = models.CharField(null=True, blank= True, max_length=1000)
+    conference_event = models.CharField(null=True, blank= True, max_length=1000)
+    languages = models.CharField(null=True, blank= True, max_length=1000)
+    projects = models.CharField(null=True, blank= True, max_length=1000)
+    active = models.BooleanField(default=True)
+    def __str__(self):
+            return self.user.email
+    
         
 class PhoneVerification(models.Model):
         user = models.OneToOneField(
@@ -172,6 +228,38 @@ class PhoneVerification(models.Model):
         verification_time = models.DateTimeField(null=True, blank=True)
         otp = models.IntegerField(null=True, blank=True)
         verified = models.BooleanField(default=False)
+
+        def __str__(self):
+                return self.user.email
+        
+class EmailVerification(models.Model):
+        user = models.OneToOneField(
+                User, 
+                on_delete=models.CASCADE, 
+                blank=True, 
+                null=True, 
+                unique=True,
+                related_name='useremailverification'
+        )
+        verification_time = models.DateTimeField(null=True, blank=True)
+        otp = models.IntegerField(null=True, blank=True)
+        verified = models.BooleanField(default=False)
+
+        def __str__(self):
+                return self.user.email
+        
+class ResetPasswordVerification(models.Model):
+        user = models.OneToOneField(
+                User, 
+                on_delete=models.CASCADE, 
+                blank=True, 
+                null=True, 
+                unique=True,
+                related_name='userresetpasswordverification'
+        )
+        verification_time = models.DateTimeField(null=True, blank=True)
+        otp = models.IntegerField(null=True, blank=True)
+        updated = models.BooleanField(default=False)
 
         def __str__(self):
                 return self.user.email
@@ -227,7 +315,7 @@ class Document(models.Model):
         return f"{self.user.email} - {self.category.name}"
     
 class OnboardingLink(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(TempUser, on_delete=models.CASCADE)
     secret =  models.UUIDField(unique=True, blank = False, null = False)
     link_to_email = models.EmailField(max_length=255, null = False, blank=False, verbose_name="Link Email")
 

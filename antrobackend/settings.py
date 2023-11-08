@@ -22,7 +22,7 @@ env = environ.Env(
 READ_DOT_ENV_FILE = env.bool('READ_DOT_ENV_FILE', default=False)
 if not READ_DOT_ENV_FILE:
     environ.Env.read_env()
-    TWO_FACTOR_API_KEY=env('TWO_FACTOR_API_KEY')
+    TWO_FACTOR_API_KEY='36110eac-9f5c-11ea-9fa5-0200cd936042'#env('TWO_FACTOR_API_KEY')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -67,7 +67,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'django_extensions',
-    'push_notifications',
+#    'push_notifications',
     'rest_framework',
     'users',
     'django.contrib.gis',
@@ -127,9 +127,9 @@ ASGI_APPLICATION = "antrobackend.asgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'antrodb',
-        'USER': 'antro',
-        'PASSWORD': 'db@123456789',
+        'NAME': 'antroproject',
+        'USER': 'antrouser',
+        'PASSWORD': 'QazPlm@123',
         'HOST': 'localhost',
         'PORT': 5432,
     }
@@ -204,12 +204,12 @@ AUTH_PROFILE_MODULE = 'users.User'
 AUTH_USER_MODEL = 'users.User'
 
 
-# GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.3/lib/libgdal.dylib"
-# GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.1/lib/libgeos_c.dylib"
+#GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.3/lib/libgdal.dylib"
+#GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.1/lib/libgeos_c.dylib"
 
 # Local
-GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.4_6/lib/libgdal.dylib"
-GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.2/lib/libgeos_c.dylib"
+# GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.6.4_6/lib/libgdal.dylib"
+# GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.2/lib/libgeos_c.dylib"
 
 ALLOWED_HOSTS = ['*']
 

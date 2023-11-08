@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from chat.models import Chat, Contact
 from chat.views import get_user_contact
 from .serializers import GroupSerializer, LocationSerializer, BranchSerializer, BranchBroadcastHistorySerializer
-from users.serializers import UserSerializer
+from users.serializers import UserSerializer, TempUserSerializer
 from rest_framework.response import Response
 from rest_framework import status
 import openpyxl
@@ -13,7 +13,7 @@ from openpyxl import Workbook
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from openpyxl.worksheet.datavalidation import DataValidation
 from ..utils import broadcast_to_branches_by_list, is_admin_of_group_or_parent, get_messages_of_group_and_children
-
+from users.models import TempUser
 User = get_user_model()
 
 
@@ -276,7 +276,13 @@ class OrganisationMembersView(APIView):
             users_list = User.objects.filter(organisation = organistion_obj)
             user_serializer_obj = UserSerializer(users_list, many=True)
 
-            return Response({"members": user_serializer_obj.data})
+            temp_user_list = TempUser.objects.filter(organisation = organistion_obj, onboarding_complete = False)
+            temp_user_serializer_obj = TempUserSerializer(temp_user_list, many=True)
+
+            return Response({
+                "members": user_serializer_obj.data,
+                "waiting_members": temp_user_serializer_obj.data
+            })
         
         except Exception as e:
             print(e)

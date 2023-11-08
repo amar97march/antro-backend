@@ -5,7 +5,8 @@ from django.contrib.auth.forms import ReadOnlyPasswordHashField
 from django.core.exceptions import ValidationError
 from django import forms
 from .models import User, UserProfile, PhoneVerification, RequestData, AddressBookItem, \
-Document, DocumentCategory
+Document, DocumentCategory, EmailVerification, ResetPasswordVerification, TempUser, TempUserProfile, \
+OnboardingLink
 
 
 class UserCreationForm(forms.ModelForm):
@@ -69,7 +70,12 @@ class UserAdmin(BaseUserAdmin):
 admin.site.register(User, UserAdmin)
 admin.site.register(UserProfile)
 admin.site.register(PhoneVerification)
+admin.site.register(EmailVerification)
+admin.site.register(ResetPasswordVerification)
 admin.site.register(RequestData)
 admin.site.register(AddressBookItem)
 admin.site.register(DocumentCategory)
 admin.site.register(Document)
+admin.site.register(TempUser)
+admin.site.register(TempUserProfile)
+admin.site.register(OnboardingLink)

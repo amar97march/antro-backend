@@ -22,7 +22,7 @@ import datetime
 import uuid
 from profiles.models import Profile
 from organisation.models import Group, Branch, Location
-from push_notifications.models import WebPushDevice
+# from push_notifications.models import WebPushDevice
 import re
 from users.utils import send_notification, generate_random_string
 from phonenumber_field.phonenumber import PhoneNumber

@@ -4,7 +4,7 @@ from channels.generic.websocket import WebsocketConsumer, AsyncWebsocketConsumer
 import json
 import uuid
 from .models import BroadcastMessage
-from push_notifications.models import WebPushDevice
+#from push_notifications.models import WebPushDevice
 from .views import get_last_10_messages, get_group_details, get_user_contact, get_current_chat, broadcast_to_sub_groups
 
 User = get_user_model()

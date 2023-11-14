@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django import forms
 from .models import User, UserProfile, PhoneVerification, RequestData, AddressBookItem, \
 Document, DocumentCategory, EmailVerification, ResetPasswordVerification, TempUser, TempUserProfile, \
-OnboardingLink
+OnboardingLink, AccountMergeRequest
 
 
 class UserCreationForm(forms.ModelForm):
@@ -74,6 +74,7 @@ admin.site.register(UserProfile)
 admin.site.register(PhoneVerification)
 admin.site.register(EmailVerification)
 admin.site.register(ResetPasswordVerification)
+admin.site.register(AccountMergeRequest)
 admin.site.register(RequestData)
 admin.site.register(AddressBookItem)
 admin.site.register(DocumentCategory)

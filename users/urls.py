@@ -31,5 +31,6 @@ urlpatterns = [
     path('deactivate-user/', DeactivateUserView.as_view(), name='deactivate-user'),
     path('get-user-by-secret/<str:secret>/', GetUserBySecret.as_view(), name='get-user-by-secret'),
     path('add-user-by-secret/', AddUserBySecret.as_view(), name='add-user-by-secret'),
-     path('search_users/<str:keyword>/', SearchUsers.as_view(), name='add-user-by-secret')
+    path('search_users/<str:keyword>/', SearchUsers.as_view(), name='search_users'),
+    path('merge_account/', MergeAccount.as_view(), name='merge-account')
 ]

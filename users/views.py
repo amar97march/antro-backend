@@ -10,10 +10,10 @@ from .utils import get_tokens_for_user
 from django.db.models import Q
 from rest_framework_simplejwt.tokens import OutstandingToken
 from users.models import User, PhoneVerification, UserProfile, RequestData, AddressBookItem,\
-Document, DocumentCategory, OnboardingLink, EmailVerification, ResetPasswordVerification, TempUser , TempUserProfile
+Document, DocumentCategory, OnboardingLink, EmailVerification, ResetPasswordVerification, TempUser , TempUserProfile, AccountMergeRequest
 from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer, \
 AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer, detect_email_or_phone, HiddenUserSerializer
-from .utils import send_verification_otp, send_reset_password_otp, send_email_verification_otp
+from .utils import send_verification_otp, send_reset_password_otp, send_email_verification_otp, send_email_account_merge_otp
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
 import json
@@ -97,7 +97,7 @@ class LoginView(APIView):
             user = authenticate(request, username=user_obj.user_id, password='password')
             if user is not None:
                 if not user.active:
-                    return Response({'data': 'Invalid Credentialfs' + str(user.active)}, status=status.HTTP_401_UNAUTHORIZED)
+                    return Response({'data': 'Invalid Credentials'}, status=status.HTTP_401_UNAUTHORIZED)
                 # phone_obj = PhoneVerification.objects.get(user = user)
                 email_obj = EmailVerification.objects.get(user = user)
                 if(not email_obj.verified):
@@ -124,7 +124,7 @@ class LoginView(APIView):
                     user_obj.set_password(generate_random_string())
                     user_obj.save()
             phone_verification_obj, flag = PhoneVerification.objects.get_or_create(user = user_obj)
-            phone_verification_obj.otp = random.randint(100000, 999999)
+            phone_verification_obj.otp = random.randint(1000, 9999)
             phone_verification_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
             phone_verification_obj.verified = False
             phone_verification_obj.save()
@@ -228,7 +228,7 @@ class ResendOTP(APIView):
             if (verification_type == "email_verification"):
 
                 email_obj = EmailVerification.objects.get(user = user)
-                email_obj.otp = random.randint(100000, 999999)
+                email_obj.otp = random.randint(1000, 9999)
                 email_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
                 email_obj.save()
                 send_email_verification_otp(user.email, email_obj.otp)
@@ -266,7 +266,7 @@ class ResetPasswordRequest(APIView):
         try:
             user_obj = User.objects.get(email = email)
             reset_obj, created = ResetPasswordVerification.objects.get_or_create(user = user_obj)
-            reset_obj.otp = random.randint(100000, 999999)
+            reset_obj.otp = random.randint(1000, 9999)
             reset_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
             send_reset_password_otp(user_obj.email, reset_obj.otp)
             reset_obj.save()
@@ -646,7 +646,77 @@ class SearchUsers(APIView):
         queryset = User.objects.filter(
             Q(first_name__icontains=keyword) |
             Q(last_name__icontains=keyword) |
-            Q(email__icontains=keyword)
+            Q(email__icontains=keyword) |
+            Q(phone_number__icontains=str(keyword))
         )
-        serializer_obj = HiddenUserSerializer(queryset, many = True)
+        profile_queryset = Profile.objects.filter(
+            Q(first_name__icontains=keyword) |
+            Q(last_name__icontains=keyword) |
+            Q(email__icontains=keyword) |
+            Q(phone__icontains=str(keyword))
+        )
+        extracted_users = [obj.user for obj in profile_queryset]
+        merged_users = set(queryset) | set(extracted_users)
+
+        # Convert the set back to a list if needed
+        merged_users_list = list(merged_users)
+        serializer_obj = HiddenUserSerializer(merged_users_list, many = True)
         return Response({'data': serializer_obj.data}, status=status.HTTP_200_OK)
+
+class MergeAccount(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            user_id = request.data.get('user_id') # new or existing 
+            # Retrieve the OnboardingLink object with the provided secret
+            old_user = User.objects.filter(user_id = user_id).first()
+            if (old_user):
+                request_obj, flag = AccountMergeRequest.objects.get_or_create(user = request.user, from_account = old_user)
+                request_obj.otp = random.randint(1000, 9999)
+                request_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
+                request_obj.merged = False
+                request_obj.save()
+                if (old_user.phone_number):
+                    send_verification_otp(old_user.phone_number, request_obj.otp)
+                if (old_user.email):
+                    send_email_account_merge_otp(old_user.email, request_obj.otp)
+                return Response({'data': "OTP sent"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Invalid account"}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({"error": "Invalid account"}, status=status.HTTP_404_NOT_FOUND)
+        
+    def put(self, request):
+        try:
+            user_id = request.data.get('user_id') # new or existing 
+            # Retrieve the OnboardingLink object with the provided secret
+            otp = request.data.get('otp') 
+            old_user = User.objects.filter(user_id = user_id).first()
+            if (old_user):
+                request_obj = AccountMergeRequest.objects.get(user = request.user, from_account = old_user, merged = False)
+                if request_obj.otp == otp and (((datetime.datetime.utcnow().replace(tzinfo=utc) -  request_obj.verification_time).total_seconds()/60) < 30):
+                    request_obj.merged = True
+                    request_obj.save()
+                # return Response({'data': 'Account verified'}, status=status.HTTP_200_OK)
+
+
+                request_obj.otp = random.randint(1000, 9999)
+                request_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
+                request_obj.merged = False
+                request_obj.save()
+                old_profiles = Profile.objects.filter(user = old_user)
+                for profile in old_profiles:
+                    profile.user = request_obj.user
+                    profile.save()
+                old_user.active = False
+                old_user.save()
+                return Response({'data': "Account merged"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Invalid account"}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            print(e)
+            return Response({"error": "Invalid account"}, status=status.HTTP_404_NOT_FOUND)

@@ -56,6 +56,20 @@ def send_email_verification_otp(email, otp):
     except Exception as e:
         print(e)
         return None
+    
+
+def send_email_account_merge_otp(email, otp):
+
+    try:
+        email_data = {
+            "otp": otp
+        }
+        send_notification([email], "account_merge_otp", email_data)
+
+    
+    except Exception as e:
+        print(e)
+        return None
 
 
 
@@ -153,6 +167,90 @@ def send_notification(emails, type, data):
         
     if type == "email_verification":
         msg['Subject'] = 'Antro Email Verification'
+        msg.set_content(f'''
+            <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{
+                            font-family: Arial, sans-serif;
+                            background-color: #f4f4f4;
+                            margin: 0;
+                            padding: 0;
+                        }}
+
+                        .container {{
+                            max-width: 800px;
+                            margin: 0 auto;
+                            padding: 20px;
+                            background-color: #ffffff;
+                        }}
+                        .container .inner-container {{
+                            background: #f5f7f9;
+                            box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+                            margin: 5%;
+                            padding: 20px;
+                            border-radius: 5px;
+                        }}
+
+                        h1 {{
+                            color: #333;
+                        }}
+
+                        p {{
+                            font-size: 16px;
+                            line-height: 1.6;
+                            color: #555;
+                        }}
+
+                        .button {{
+                            display: inline-block;
+                            padding: 10px 20px;
+                            background-color: #0076f4;
+                            color: #fff;
+                            text-decoration: none;
+                            border-radius: 5px;
+                        }}
+
+                        .button:hover {{
+                            background-color: #0056b3;
+                        }}
+                        .link-btn {{
+                            padding: 10px 15px;
+                            border: none;
+                            border-radius: 20px;
+                            background: #0076ff;
+                            color: white;
+                            margin: auto;
+                        }}
+
+                        .footer {{
+                            margin-top: 20px;
+                            font-size: 14px;
+                            color: #777;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Welcome to Antro</h1>
+                        <div class="inner-container">
+                        <p>Hi</p>
+                        <p>Please use the following 6 digit number to verify your account.</p>
+                        <div style="text-align: center;">
+                            {data['otp']}
+                        </div>
+                        <p>Thank you</p>
+                        <p>Best regards,</p>
+                        <p>Team Antro</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            ''', subtype='html')
+        
+    if type == "account_merge_otp":
+        msg['Subject'] = 'Antro Account Merge'
         msg.set_content(f'''
             <!DOCTYPE html>
                 <html>

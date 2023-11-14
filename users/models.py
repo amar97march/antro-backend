@@ -341,3 +341,10 @@ class OnboardingLink(models.Model):
 
     def __str__(self):
         return f"{self.user.email}"
+    
+class AccountMergeRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='accountmergerequest')
+    from_account = models.ForeignKey(User, on_delete=models.CASCADE, related_name='accountmergerequestfrom')
+    verification_time = models.DateTimeField(null=True, blank=True)
+    otp = models.IntegerField(null=True, blank=True)
+    merged = models.BooleanField(default=False)

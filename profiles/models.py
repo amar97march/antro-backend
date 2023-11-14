@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from phonenumber_field.modelfields import PhoneNumberField
 
 
 class Keyword(models.Model):
@@ -31,27 +32,28 @@ from users.models import User
 
 class Profile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
-    email = models.EmailField(max_length=254, default="")
-    phone = models.CharField(max_length=20, default="")
+    first_name = models.CharField(max_length=254, null=True, blank=True)
+    last_name = models.CharField(max_length=254, null=True, blank=True)
+    email = models.EmailField(max_length=254, default="", null=True, blank=True)
+    phone = PhoneNumberField(blank=True, null=True)
     designation = models.CharField(max_length=100, null=True, blank= True)
-    company_name = models.CharField(max_length=100)
+    company_name = models.CharField(max_length=100, null = True, blank= True)
     company_sub_heading = models.CharField(max_length=100, null=True, blank= True)
     category = models.ForeignKey(ProfileCategory, on_delete=models.CASCADE)
     category_custom = models.CharField(max_length=100, null=True, blank=True)
     social_site = models.ForeignKey(ProfileCategorySocialSite, on_delete=models.CASCADE)
     social_site_custom = models.CharField(max_length=100, null=True, blank=True)
-    location = models.PointField()
-    address = models.CharField(max_length=100)
-    city = models.CharField(max_length=50)
+    location = models.PointField(null=True, default=None)
+    address = models.CharField(max_length=100, null = True, blank= True)
+    city = models.CharField(max_length=50, null = True, blank= True)
     contact_number_1 = models.CharField(null=True, blank= True, max_length=50)
     contact_number_2 = models.CharField(null=True, blank= True, max_length=50)
     website = models.URLField(null=True, blank= True)
-    profession = models.CharField(max_length=100)
+    profession = models.CharField(max_length=100, null = True, blank= True)
     keywords = models.ManyToManyField(Keyword)
 
     class Meta:
-        ordering = ['name']
+        ordering = ['first_name']
 
     def __str__(self):
-        return self.name
+        return self.user.user_id

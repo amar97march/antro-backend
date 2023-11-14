@@ -88,7 +88,7 @@ class MyProfilesView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
-            queryset = Profile.objects.filter(user=request.user).order_by('name')
+            queryset = Profile.objects.filter(user=request.user).order_by('first_name')
             profile_serializer_obj = ProfileSerializer(queryset, many=True)
             return Response({
                 'message': 'successfully retrieve profiles information',

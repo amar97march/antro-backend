@@ -15,14 +15,19 @@ import datetime
 import environ
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
 env = environ.Env(
     DEBUG=(bool, False)
 )
-
-READ_DOT_ENV_FILE = env.bool('READ_DOT_ENV_FILE', default=False)
-if not READ_DOT_ENV_FILE:
+print("asfasg")
+READ_DOT_ENV_FILE = env('READ_DOT_ENV_FILE')
+if READ_DOT_ENV_FILE:
+    print("asfasgasgasg")
     environ.Env.read_env()
-    TWO_FACTOR_API_KEY=env('TWO_FACTOR_API_KEY')
+    print("asfasg")
+    TWO_FACTOR_API_KEY= env('TWO_FACTOR_API_KEY')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -70,6 +75,7 @@ INSTALLED_APPS = [
     'push_notifications',
     'rest_framework',
     'users',
+    'phonenumber_field',
     'django.contrib.gis',
     'profiles',
     'chat',
@@ -175,6 +181,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
+AUTHENTICATION_BACKENDS = [
+    'users.auth_backends.CustomUserBackend',
+]
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/

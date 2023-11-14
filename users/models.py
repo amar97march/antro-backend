@@ -4,7 +4,9 @@ from django.utils import timezone
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 import uuid
-
+import random
+import string
+from phonenumber_field.modelfields import PhoneNumberField
 
 
 
@@ -77,13 +79,22 @@ class UserManager(BaseUserManager):
   def create_user(self, email, password, **extra_fields):
     return self._create_user(email, password, False, False, **extra_fields)
 
-  def create_superuser(self, email, password, **extra_fields):
-    user=self._create_user(email, password, True, True, **extra_fields)
+  def create_superuser(self, user_id, password, **extra_fields):
+    user=self._create_user(user_id, password, True, True, **extra_fields)
+    user.user_id = user_id
+    user.email = 'superadmin@antro.com'
+    user.email_verified = True
+    user.save()
     return user
 
+def generate_user_id():
+    generated_id = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+    return generated_id
 
 class User(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField(max_length=254, unique=True)
+    user_id = models.CharField(max_length=10, unique=True, default=generate_user_id, editable=False)
+    email = models.EmailField(max_length=254,null=True, blank=True)
+    phone_number = PhoneNumberField(blank=True, null=True)
     first_name = models.CharField(max_length=254, null=True, blank=True)
     last_name = models.CharField(max_length=254, null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
@@ -93,11 +104,12 @@ class User(AbstractBaseUser, PermissionsMixin):
                 blank=True, 
                 null=True
       )
-    
     is_staff = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     active = models.BooleanField(default=True)
+    email_verified = models.BooleanField(default=False)
+    phone_verified = models.BooleanField(default=False)
     verified_by_antro = models.BooleanField(default=False)
     verified_by_user = models.BooleanField(default=False)
     verified_by_organisation = models.BooleanField(default=False)
@@ -106,7 +118,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     onboarding_complete = models.BooleanField(default=True)
     
 
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = 'user_id'
     EMAIL_FIELD = 'email'
     REQUIRED_FIELDS = []
 
@@ -115,8 +127,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_absolute_url(self):
         return "/users/%i/" % (self.pk)
     
+    # def __str__(self):
+    #     return self.user_id
+    
     def __str__(self):
-        return self.email
+        return f"{self.user_id} - {self.email or 'No Email'} - {self.phone_number or 'No Phone Number'}"
     
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
@@ -124,6 +139,9 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.create(user=instance)
         PhoneVerification.objects.create(user=instance)
         EmailVerification.objects.create(user=instance)
+        profile_cat_obj = ProfileCategory.objects.filter(name='Default').first()
+        profile_cat_ss_obj = ProfileCategorySocialSite.objects.filter(name="Default", profile_category = profile_cat_obj).first()
+        Profile.objects.create(user = instance, category = profile_cat_obj, social_site = profile_cat_ss_obj, email = instance.email if instance.email else None, phone = instance.phone_number if instance.phone_number else None)
     else:
         instance.userprofile.save()
 
@@ -166,13 +184,14 @@ class UserProfile(models.Model):
                 null=True
       )
         bio = models.CharField(max_length=200, default='', blank=True)
-        phone = models.CharField(blank=True, null=True, max_length=20)
+        phone = PhoneNumberField(blank=True, null=True)
         image = models.ImageField(upload_to='profile_image', blank=True, null = True)
         gender = models.CharField(default='', blank=True, max_length=20)
         contact_information = models.CharField(null=True, blank= True, max_length=50)
-        Education: models.CharField(null=True, blank= True, max_length=50)
-        Experience: models.FloatField(null=True, blank= True)
-        Skills: models.CharField(null=True, blank= True, max_length=1000)
+        Education = models.CharField(null=True, blank= True, max_length=50)
+        Experience = models.FloatField(null=True, blank= True)
+        designation = models.CharField(null=True, blank= True, max_length=100)
+        skills = models.CharField(null=True, blank= True, max_length=1000)
         Certifications: models.CharField(null=True, blank= True, max_length=1000)
         awards_recognitions = models.CharField(null=True, blank= True, max_length=1000)
         personal_website = models.CharField(null=True, blank= True, max_length=1000)
@@ -181,8 +200,9 @@ class UserProfile(models.Model):
         projects = models.CharField(null=True, blank= True, max_length=1000)
         active = models.BooleanField(default=True)
         coporate = models.BooleanField(default=False)
+        
         def __str__(self):
-                return self.user.email
+                return self.user.user_id
         
 class TempUserProfile(models.Model):
     user = models.OneToOneField(
@@ -230,7 +250,7 @@ class PhoneVerification(models.Model):
         verified = models.BooleanField(default=False)
 
         def __str__(self):
-                return self.user.email
+                return self.user.user_id
         
 class EmailVerification(models.Model):
         user = models.OneToOneField(
@@ -246,7 +266,7 @@ class EmailVerification(models.Model):
         verified = models.BooleanField(default=False)
 
         def __str__(self):
-                return self.user.email
+                return self.user.user_id
         
 class ResetPasswordVerification(models.Model):
         user = models.OneToOneField(

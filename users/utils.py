@@ -5,6 +5,8 @@ import os
 from antrobackend.settings import env
 from email.message import EmailMessage
 import smtplib
+import secrets
+import string
 
 
 EMAIL_ADDRESS = 'amar97march@gmail.com'
@@ -18,12 +20,9 @@ def get_tokens_for_user(user):
         'access': str(refresh.access_token),
     }
 
-def send_verification_otp(phone_number):
+def send_verification_otp(phone_number, otp):
 
     try:
-        # print(env("2FACTOR_API_KEY"))
-        print("ASFASFG: ", env('TWO_FACTOR_API_KEY'), phone_number)
-        otp = random.randint(100000, 999999)
         url = f'https://2factor.in/API/V1/{env("TWO_FACTOR_API_KEY")}/SMS/{phone_number}/{otp}/OTP1'
         response = requests.get(url)
         print("Send OTP: ", response.json())
@@ -39,13 +38,6 @@ def send_reset_password_otp(email, otp):
             "otp": otp
         }
         send_notification([email], "reset_password", email_data)
-        # print(env("2FACTOR_API_KEY"))
-        # print("ASFASFG: ", env('TWO_FACTOR_API_KEY'), phone_number)
-        # otp = random.randint(100000, 999999)
-        # url = f'https://2factor.in/API/V1/{env("TWO_FACTOR_API_KEY")}/SMS/{phone_number}/{otp}/OTP1'
-        # response = requests.get(url)
-        # print("Send OTP: ", response.json())
-        # return otp
     
     except Exception as e:
         print(e)
@@ -59,13 +51,7 @@ def send_email_verification_otp(email, otp):
             "otp": otp
         }
         send_notification([email], "email_verification", email_data)
-        # print(env("2FACTOR_API_KEY"))
-        # print("ASFASFG: ", env('TWO_FACTOR_API_KEY'), phone_number)
-        # otp = random.randint(100000, 999999)
-        # url = f'https://2factor.in/API/V1/{env("TWO_FACTOR_API_KEY")}/SMS/{phone_number}/{otp}/OTP1'
-        # response = requests.get(url)
-        # print("Send OTP: ", response.json())
-        # return otp
+
     
     except Exception as e:
         print(e)
@@ -338,3 +324,9 @@ def send_notification(emails, type, data):
         smtp.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         print("Email Sent")
         smtp.send_message(msg)
+
+
+def generate_random_string(length=15):
+    alphanumeric_characters = string.ascii_letters + string.digits
+    random_string = ''.join(secrets.choice(alphanumeric_characters) for _ in range(length))
+    return random_string

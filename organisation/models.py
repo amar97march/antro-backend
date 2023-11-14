@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from users.models import Organisation
+from phonenumber_field.modelfields import PhoneNumberField
 
 import uuid
 import json
@@ -146,7 +147,7 @@ class Branch(CompanyBaseModel):
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank = True)
     branch_name = models.CharField(max_length=100, null=False, blank=False)
     branch_address = models.CharField(max_length=200, null=True, blank=True)
-    branch_phone = models.CharField(max_length=20, null=True, blank=True)
+    branch_phone = PhoneNumberField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

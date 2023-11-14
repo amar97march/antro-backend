@@ -39,7 +39,7 @@ class UserChangeForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ('email', 'password', 'date_of_birth', 'is_active', 'is_admin', 'active')
+        fields = ('email', 'password', 'date_of_birth', 'is_active', 'is_admin', 'active', 'verified_by_antro', 'verified_by_user', 'verified_by_organisation')
 
     def clean_password(self):
         return self.initial["password"]
@@ -49,13 +49,15 @@ class UserAdmin(BaseUserAdmin):
     form = UserChangeForm
     add_form = UserCreationForm
 
-    list_display = ('email', 'date_of_birth', 'is_admin')
+    list_display = ('email', 'phone_number', 'date_of_birth', 'is_admin')
     list_filter = ('is_admin', )
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('date_of_birth', 'first_name', 'last_name', 'organisation',)}),
+        (None, {'fields': ('user_id','email', 'phone_number', 'password')}),
+        ('Account Verification', {'fields': ('email_verified', 'phone_verified')}),
+        ('Personal info', {'fields': ('date_of_birth', 'first_name', 'last_name', 'organisation', 'verified_by_antro', 'verified_by_user', 'verified_by_organisation')}),
         ('Permissions', {'fields': ('is_admin','is_staff', 'active')}),
     )
+    readonly_fields = ('user_id',)
     add_fieldsets = (
         (None, {
             'classes': ('wide',),

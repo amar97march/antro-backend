@@ -92,6 +92,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 data["branch"] = None
         else:
                 data["branch"] = None
+        if data["image"]:
+            data ['image'] = "https://dev.antrocorp.com" + str(data["image"])
         return data
     
 
@@ -111,12 +113,13 @@ def detect_email_or_phone(input_str):
     return None
 
 class RegistrationSerializer(serializers.ModelSerializer):
-    email = serializers.CharField(max_length=255, required=True)
+    email = serializers.CharField(max_length=255, required=False)
+    phone = serializers.CharField(max_length=255, required=False)
     password2 = serializers.CharField(style={"input_type": "password"}, write_only=True)
 
     class Meta:
         model = User
-        fields = ['email', 'date_of_birth', 'password', 'password2', 'first_name', 'last_name']
+        fields = ['email', 'phone', 'date_of_birth', 'password', 'password2', 'first_name', 'last_name']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -124,14 +127,19 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def save(self):
         # Check if the input is an email address
         email_pattern = re.compile(r'^\S+@\S+\.\S+$')
-
-        input_type = detect_email_or_phone(self.validated_data['email'])
-        if input_type == 'email':
-            user_obj = User.objects.filter(email = self.validated_data['email'], email_verified = True).first()
+        if 'email' in self.validated_data:
+            email = self.validated_data['email']
+            pattern = r'^\S+@\S+\.\S+$'
+    
+    # Use re.match() to search for the pattern at the beginning of the string
+            match = re.match(pattern, email)
+            if not match:
+                raise serializers.ValidationError("Invalid email")
+            user_obj = User.objects.filter(email = email, email_verified = True).first()
             if user_obj:
                 raise serializers.ValidationError("Email already in use.")
             else:
-                user_obj = User.objects.filter(email = self.validated_data['email']).first()
+                user_obj = User.objects.filter(email = email).first()
                 
                 if user_obj:
                     user_obj.date_of_birth = self.validated_data['date_of_birth']
@@ -139,7 +147,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                     user_obj.last_name = self.validated_data['last_name']
                     user_obj.save()
                 else:
-                    user_obj = User(email=self.validated_data['email'],
+                    user_obj = User(email=email,
                                 date_of_birth=self.validated_data['date_of_birth'],
                                 first_name = self.validated_data['first_name'],
                                 last_name = self.validated_data['last_name']
@@ -155,12 +163,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 email_obj.verification_time = datetime.now() + timedelta(minutes=2)
                 email_obj.save()
                 send_email_verification_otp(user_obj.email, email_obj.otp)
-        elif input_type == 'phone':
-            user_obj = User.objects.filter(phone_number = self.validated_data['email'], phone_verified = True).first()
+        elif 'phone' in self.validated_data:
+            user_obj = User.objects.filter(phone_number = self.validated_data['phone'], phone_verified = True).first()
             if not user_obj:
-                user_obj = User.objects.filter(phone_number = self.validated_data['email']).first()
+                user_obj = User.objects.filter(phone_number = self.validated_data['phone']).first()
                 if not user_obj:
-                    user_obj = User(phone_number=self.validated_data['email']
+                    user_obj = User(phone_number=self.validated_data['phone']
                             )
                     user_obj.set_password(generate_random_string())
                     user_obj.save()
@@ -170,8 +178,11 @@ class RegistrationSerializer(serializers.ModelSerializer):
             phone_verification_obj.verified = False
             phone_verification_obj.save()
             send_verification_otp(user_obj.phone_number, phone_verification_obj.otp)
+        
         else:
             raise serializers.ValidationError("Invalid Email or Phone Number")
+
+        # input_type = detect_email_or_phone(self.validated_data['email'])
         
         return user_obj
 

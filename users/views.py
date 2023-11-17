@@ -34,8 +34,9 @@ class RegistrationView(APIView):
         serializer = RegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user_obj = serializer.save()
-            input_type = detect_email_or_phone(request.data.get('email'))
-            if input_type == 'email':
+            email = request.data.get('email')
+            # input_type = detect_email_or_phone(request.data.get('email'))
+            if email:
                 user_profile_obj = UserProfile.objects.get(user = user_obj)
                 user_profile_obj.designation = request.data.get('designation')
                 user_profile_obj.save()
@@ -168,12 +169,13 @@ class VerifyOTP(APIView):
         otp = request.data.get('otp')
         verification_type = request.data.get('type')
         email = request.data.get('email')
+        phone = request.data.get('phone')
         new_password = request.data.get('new_password')
 
         try:
-            user = User.objects.get(email = email)
+            # user = User.objects.get(email = email)
             if (verification_type == "phone"):
-
+                user = User.objects.get(phone_number = phone, phone_verified = True)
                 phone_obj = PhoneVerification.objects.get(user = user)
                 if phone_obj.otp == otp and (((datetime.datetime.utcnow().replace(tzinfo=utc) -  phone_obj.verification_time).total_seconds()/60) < 30) :
                     phone_obj.verified = True
@@ -184,6 +186,7 @@ class VerifyOTP(APIView):
                 else:
                     return Response({'data': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
             elif (verification_type == "email"):
+                user = User.objects.get(email = email)
                 email_obj = EmailVerification.objects.get(user = user, verified = False)
                 if email_obj.verification_time > datetime.datetime.utcnow().replace(tzinfo=utc) and email_obj.otp == int(otp):
                     email_obj.verified = True
@@ -195,6 +198,7 @@ class VerifyOTP(APIView):
                 else:
                     return Response({'error': 'Invalid or expired otp'}, status=status.HTTP_400_BAD_REQUEST)
             elif (verification_type == "reset_password"):
+                user = User.objects.get(email = email)
                 reset_password_obj = ResetPasswordVerification.objects.get(user = user)
                 if reset_password_obj.verification_time > datetime.datetime.utcnow().replace(tzinfo=utc) and reset_password_obj.otp == int(otp):
                     reset_password_obj.updated = True
@@ -506,6 +510,27 @@ class DocumentUpload(APIView):
         serializer = DocumentSerializer(document)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+class AddProfilePicture(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        # Check if the user is authenticated
+
+        # Extract data from the request
+        file = request.data.get('file')
+
+        # Validate category_id and get the category
+        try:
+            user_obj = User.objects.get(id = request.user.id)
+            user_profile_obj = UserProfile.objects.get(user = user_obj)
+            user_profile_obj.image = file
+            user_profile_obj.save()
+        except DocumentCategory.DoesNotExist:
+            return Response({"error": "Image not saved"}, status=status.HTTP_404_NOT_FOUND)
+        serailizer_data = UserProfileSerializer(user_profile_obj)
+        return Response(serailizer_data.data, status=status.HTTP_201_CREATED)
 
 class DocumentDelete(APIView):
     permission_classes = [IsAuthenticated]

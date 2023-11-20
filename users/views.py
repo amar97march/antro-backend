@@ -125,7 +125,7 @@ class LoginView(APIView):
                     user_obj.set_password(generate_random_string())
                     user_obj.save()
             phone_verification_obj, flag = PhoneVerification.objects.get_or_create(user = user_obj)
-            phone_verification_obj.otp = random.randint(1000, 9999)
+            phone_verification_obj.otp = 0000 #random.randint(1000, 9999)
             phone_verification_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
             phone_verification_obj.verified = False
             phone_verification_obj.save()
@@ -242,7 +242,7 @@ class ResendOTP(APIView):
             if (verification_type == "email_verification"):
 
                 email_obj = EmailVerification.objects.get(user = user)
-                email_obj.otp = random.randint(1000, 9999)
+                email_obj.otp = 0000 #random.randint(1000, 9999)
                 email_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
                 email_obj.save()
                 send_email_verification_otp(user.email, email_obj.otp)
@@ -280,7 +280,7 @@ class ResetPasswordRequest(APIView):
         try:
             user_obj = User.objects.get(email = email)
             reset_obj, created = ResetPasswordVerification.objects.get_or_create(user = user_obj)
-            reset_obj.otp = random.randint(1000, 9999)
+            reset_obj.otp = 0000 #random.randint(1000, 9999)
             reset_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
             send_reset_password_otp(user_obj.email, reset_obj.otp)
             reset_obj.save()
@@ -709,7 +709,7 @@ class MergeAccount(APIView):
             old_user = User.objects.filter(user_id = user_id).first()
             if (old_user):
                 request_obj, flag = AccountMergeRequest.objects.get_or_create(user = request.user, from_account = old_user)
-                request_obj.otp = random.randint(1000, 9999)
+                request_obj.otp = 0000 #random.randint(1000, 9999)
                 request_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
                 request_obj.merged = False
                 request_obj.save()
@@ -738,7 +738,7 @@ class MergeAccount(APIView):
                 # return Response({'data': 'Account verified'}, status=status.HTTP_200_OK)
 
 
-                request_obj.otp = random.randint(1000, 9999)
+                request_obj.otp = 0000 #random.randint(1000, 9999)
                 request_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
                 request_obj.merged = False
                 request_obj.save()

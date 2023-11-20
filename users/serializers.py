@@ -115,7 +115,8 @@ def detect_email_or_phone(input_str):
 class RegistrationSerializer(serializers.ModelSerializer):
     email = serializers.CharField(max_length=255, required=False)
     phone = serializers.CharField(max_length=255, required=False)
-    password2 = serializers.CharField(style={"input_type": "password"}, write_only=True)
+    password = serializers.CharField(style={"input_type": "password"}, write_only=True, required=False)
+    password2 = serializers.CharField(style={"input_type": "password"}, write_only=True, required=False)
 
     class Meta:
         model = User
@@ -159,7 +160,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 user_obj.set_password(password)
                 user_obj.save()
                 email_obj, flag = EmailVerification.objects.get_or_create(user = user_obj)
-                email_obj.otp = random.randint(1000, 9999)
+                email_obj.otp = 0000 #random.randint(1000, 9999)
                 email_obj.verification_time = datetime.now() + timedelta(minutes=2)
                 email_obj.save()
                 send_email_verification_otp(user_obj.email, email_obj.otp)
@@ -173,7 +174,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                     user_obj.set_password(generate_random_string())
                     user_obj.save()
             phone_verification_obj, flag = PhoneVerification.objects.get_or_create(user = user_obj)
-            phone_verification_obj.otp = random.randint(1000, 9999)
+            phone_verification_obj.otp = 0000 #random.randint(1000, 9999)
             phone_verification_obj.verification_time = datetime.now() + timedelta(minutes=2)
             phone_verification_obj.verified = False
             phone_verification_obj.save()

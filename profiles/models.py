@@ -35,7 +35,7 @@ class Profile(models.Model):
     first_name = models.CharField(max_length=254, null=True, blank=True)
     last_name = models.CharField(max_length=254, null=True, blank=True)
     email = models.EmailField(max_length=254, default="", null=True, blank=True)
-    phone = PhoneNumberField(blank=True, null=True)
+    phone_number = PhoneNumberField(blank=True, null=True)
     designation = models.CharField(max_length=100, null=True, blank= True)
     company_name = models.CharField(max_length=100, null = True, blank= True)
     company_sub_heading = models.CharField(max_length=100, null=True, blank= True)

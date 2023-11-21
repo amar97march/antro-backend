@@ -59,7 +59,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = '__all__'
-        read_only_fields = ['phone']
+        read_only_fields = ['phone_number']
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')
@@ -114,13 +114,13 @@ def detect_email_or_phone(input_str):
 
 class RegistrationSerializer(serializers.ModelSerializer):
     email = serializers.CharField(max_length=255, required=False)
-    phone = serializers.CharField(max_length=255, required=False)
+    phone_number = serializers.CharField(max_length=255, required=False)
     password = serializers.CharField(style={"input_type": "password"}, write_only=True, required=False)
     password2 = serializers.CharField(style={"input_type": "password"}, write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ['email', 'phone', 'date_of_birth', 'password', 'password2', 'first_name', 'last_name']
+        fields = ['email', 'phone_number', 'date_of_birth', 'password', 'password2', 'first_name', 'last_name']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -164,12 +164,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 email_obj.verification_time = datetime.now() + timedelta(minutes=2)
                 email_obj.save()
                 send_email_verification_otp(user_obj.email, email_obj.otp)
-        elif 'phone' in self.validated_data:
-            user_obj = User.objects.filter(phone_number = self.validated_data['phone'], phone_verified = True).first()
+        elif 'phone_number' in self.validated_data:
+            user_obj = User.objects.filter(phone_number = self.validated_data['phone_number'], phone_verified = True).first()
             if not user_obj:
-                user_obj = User.objects.filter(phone_number = self.validated_data['phone']).first()
+                user_obj = User.objects.filter(phone_number = self.validated_data['phone_number']).first()
                 if not user_obj:
-                    user_obj = User(phone_number=self.validated_data['phone']
+                    user_obj = User(phone_number=self.validated_data['phone_number']
                             )
                     user_obj.set_password(generate_random_string())
                     user_obj.save()

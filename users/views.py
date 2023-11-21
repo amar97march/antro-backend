@@ -148,8 +148,8 @@ class SendOTP(APIView):
         else:
             user = request.user
         country_code = request.data.get('country_code')
-        phone = request.data.get('phone')
-        otp = send_verification_otp(f'+{country_code}{phone}')
+        phone_number = request.data.get('phone_number')
+        otp = send_verification_otp(f'+{country_code}{phone_number}')
         if otp:
 
             phone_obj = PhoneVerification.objects.get(user = user)
@@ -169,13 +169,13 @@ class VerifyOTP(APIView):
         otp = request.data.get('otp')
         verification_type = request.data.get('type')
         email = request.data.get('email')
-        phone = request.data.get('phone')
+        phone_number = request.data.get('phone_number')
         new_password = request.data.get('new_password')
 
         try:
             # user = User.objects.get(email = email)
             if (verification_type == "phone"):
-                user = User.objects.get(phone_number = phone, phone_verified = False)
+                user = User.objects.get(phone_number = phone_number, phone_verified = False)
                 phone_obj = PhoneVerification.objects.get(user = user)
                 if phone_obj.otp == otp and (((datetime.datetime.utcnow().replace(tzinfo=utc) -  phone_obj.verification_time).total_seconds()/60) < 30) :
                     phone_obj.verified = True
@@ -199,7 +199,7 @@ class VerifyOTP(APIView):
                     organisation_serializer_obj = OrganisationSerializer(user.organisation)
                     auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
                                             "email": user.email,
-                                            "phone": str(user.phone_number),
+                                            "phone_number": str(user.phone_number),
                                             "first_name": user.first_name,
                                             "last_name": user.last_name,
                                             "id": user.id
@@ -405,7 +405,7 @@ class GetTokenByPhoneOTP(APIView):
                 organisation_serializer_obj = OrganisationSerializer(user.organisation)
                 auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
                                         "email": user.email,
-                                        "phone": str(user.phone_number),
+                                        "phone_number": str(user.phone_number),
                                         "first_name": user.first_name,
                                         "last_name": user.last_name,
                                         "id": user.id
@@ -435,8 +435,8 @@ class CreateMembersView(APIView):
 
             if match:
                 extracted_uuid = match.group(1)
-                branchObj = Branch.objects.filter(id = extracted_uuid).first()
-                if not branchObj:
+                branch_obj = Branch.objects.filter(id = extracted_uuid).first()
+                if not branch_obj:
                     not_added_list.append({
                     "email": user_obj_dict["Email"],
                     "error": "Invalid Branch"
@@ -453,7 +453,6 @@ class CreateMembersView(APIView):
             if not already_present:
                 reference_date = datetime.datetime(1900, 1, 1)
                 target_date = reference_date + datetime.timedelta(days=user_obj_dict['Date Of Birth'])
-                pass
                 new_user_obj = TempUser.objects.create(first_name = user_obj_dict["First Name"],
                                                    last_name = user_obj_dict["Last Name"],
                                                    email = user_obj_dict["Email"],
@@ -462,11 +461,11 @@ class CreateMembersView(APIView):
                                                    onboarding_complete = False
                                                    )
                 user_profile_obj = TempUserProfile.objects.create(user = new_user_obj)
-                user_profile_obj.phone = user_obj_dict['Phone']
+                user_profile_obj.phone_number = user_obj_dict['Phone']
                 user_profile_obj.gender = user_obj_dict['Gender']
                 user_profile_obj.Education = user_obj_dict['Education']
                 user_profile_obj.Experience = user_obj_dict['Experience']
-                user_profile_obj.branch = branchObj
+                user_profile_obj.branch = branch_obj
                 user_profile_obj.save()
                 link_uuid = uuid.uuid4()
                 onboard_obj = OnboardingLink.objects.create(user = new_user_obj, secret = link_uuid, link_to_email = user_obj_dict["Email"])
@@ -688,7 +687,7 @@ class SearchUsers(APIView):
             Q(first_name__icontains=keyword) |
             Q(last_name__icontains=keyword) |
             Q(email__icontains=keyword) |
-            Q(phone__icontains=str(keyword))
+            Q(phone_number__icontains=str(keyword))
         )
         extracted_users = [obj.user for obj in profile_queryset]
         merged_users = set(queryset) | set(extracted_users)

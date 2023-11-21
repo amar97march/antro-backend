@@ -175,7 +175,7 @@ class VerifyOTP(APIView):
         try:
             # user = User.objects.get(email = email)
             if (verification_type == "phone"):
-                user = User.objects.get(phone_number = phone, phone_verified = True)
+                user = User.objects.get(phone_number = phone, phone_verified = False)
                 phone_obj = PhoneVerification.objects.get(user = user)
                 if phone_obj.otp == otp and (((datetime.datetime.utcnow().replace(tzinfo=utc) -  phone_obj.verification_time).total_seconds()/60) < 30) :
                     phone_obj.verified = True

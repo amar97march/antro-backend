@@ -141,7 +141,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
         EmailVerification.objects.create(user=instance)
         profile_cat_obj = ProfileCategory.objects.filter(name='Default').first()
         profile_cat_ss_obj = ProfileCategorySocialSite.objects.filter(name="Default", profile_category = profile_cat_obj).first()
-        Profile.objects.create(user = instance, category = profile_cat_obj, social_site = profile_cat_ss_obj, email = instance.email if instance.email else None, phone = instance.phone_number if instance.phone_number else None)
+        Profile.objects.create(user = instance, category = profile_cat_obj, social_site = profile_cat_ss_obj, email = instance.email if instance.email else None, phone_number = instance.phone_number if instance.phone_number else None)
     else:
         instance.userprofile.save()
 
@@ -184,7 +184,7 @@ class UserProfile(models.Model):
                 null=True
       )
         bio = models.CharField(max_length=200, default='', blank=True)
-        phone = PhoneNumberField(blank=True, null=True)
+        phone_number = PhoneNumberField(blank=True, null=True)
         image = models.ImageField(upload_to='profile_image', blank=True, null = True)
         gender = models.CharField(default='', blank=True, max_length=20)
         contact_information = models.CharField(null=True, blank= True, max_length=50)

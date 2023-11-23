@@ -182,7 +182,18 @@ class VerifyOTP(APIView):
                     phone_obj.save()
                     user.phone_verified = True
                     user.save()
-                    return Response({'data': 'Account verified'}, status=status.HTTP_200_OK)
+                    auth_data = get_tokens_for_user(user)
+                    auth_data["is_staff"] = user.is_staff
+                    organisation_serializer_obj = OrganisationSerializer(user.organisation)
+                    auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
+                                            "email": user.email,
+                                            "phone_number": str(user.phone_number),
+                                            "first_name": user.first_name,
+                                            "last_name": user.last_name,
+                                            "id": user.id
+                                            }
+                    return Response({'data': 'Login Success', **auth_data}, status=status.HTTP_200_OK)
+                    # return Response({'data': 'Account verified'}, status=status.HTTP_200_OK)
                 else:
                     return Response({'data': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
             elif (verification_type == "email"):
@@ -204,7 +215,18 @@ class VerifyOTP(APIView):
                                             "last_name": user.last_name,
                                             "id": user.id
                                             }
-                    return Response({'data': auth_data}, status=status.HTTP_200_OK)
+                    auth_data = get_tokens_for_user(user)
+                    auth_data["is_staff"] = user.is_staff
+                    organisation_serializer_obj = OrganisationSerializer(user.organisation)
+                    auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
+                                            "email": user.email,
+                                            "phone_number": str(user.phone_number),
+                                            "first_name": user.first_name,
+                                            "last_name": user.last_name,
+                                            "id": user.id
+                                            }
+                    return Response({'data': 'Login Success', **auth_data}, status=status.HTTP_200_OK)
+                    # return Response({'data': auth_data}, status=status.HTTP_200_OK)
                 else:
                     return Response({'error': 'Invalid or expired otp'}, status=status.HTTP_400_BAD_REQUEST)
             elif (verification_type == "reset_password"):

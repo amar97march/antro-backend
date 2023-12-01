@@ -280,8 +280,7 @@ class OrganisationMembersView(APIView):
             temp_user_serializer_obj = TempUserSerializer(temp_user_list, many=True)
 
             return Response({
-                "members": user_serializer_obj.data,
-                "waiting_members": temp_user_serializer_obj.data
+                "members": user_serializer_obj.data + temp_user_serializer_obj.data
             })
         
         except Exception as e:

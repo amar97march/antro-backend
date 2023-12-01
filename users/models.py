@@ -348,3 +348,19 @@ class AccountMergeRequest(models.Model):
     verification_time = models.DateTimeField(null=True, blank=True)
     otp = models.IntegerField(null=True, blank=True)
     merged = models.BooleanField(default=False)
+
+
+
+class ProfileComment(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='comments')
+    content = models.TextField()
+    parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    created_at = models.DateTimeField(auto_now_add=True)
+    # Add other fields as needed
+
+class ProfileLike(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='likes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    # Add other fields as needed

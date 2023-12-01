@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from rest_framework import status, generics
+from rest_framework import status, generics, serializers
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import  Response
 from rest_framework.views import APIView
@@ -10,9 +10,11 @@ from .utils import get_tokens_for_user
 from django.db.models import Q
 from rest_framework_simplejwt.tokens import OutstandingToken
 from users.models import User, PhoneVerification, UserProfile, RequestData, AddressBookItem,\
-Document, DocumentCategory, OnboardingLink, EmailVerification, ResetPasswordVerification, TempUser , TempUserProfile, AccountMergeRequest
+Document, DocumentCategory, OnboardingLink, EmailVerification, ResetPasswordVerification, TempUser , TempUserProfile, AccountMergeRequest,\
+ProfileComment, ProfileLike
 from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer, \
-AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer, detect_email_or_phone, HiddenUserSerializer
+AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer, detect_email_or_phone, HiddenUserSerializer,\
+ProfileCommentSerializer, ProfileLikeSerializer
 from .utils import send_verification_otp, send_reset_password_otp, send_email_verification_otp, send_email_account_merge_otp
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
@@ -86,8 +88,10 @@ class LoginView(APIView):
     def post(self, request):
         
        
-        input_type = detect_email_or_phone(request.data.get('email'))
-        if input_type == 'email':
+        # input_type = detect_email_or_phone(request.data.get('email'))
+        # request.data.get('email')
+        email = request.data.get('email')
+        if email:
             if 'email' not in request.data or 'password' not in request.data:
                 return Response({'data': 'Credentials missing'}, status=status.HTTP_400_BAD_REQUEST)
             email = request.data.get('email')
@@ -115,12 +119,12 @@ class LoginView(APIView):
                                         "id": user.id
                                         }
                 return Response({'data': 'Login Success', **auth_data}, status=status.HTTP_200_OK)
-        elif input_type == 'phone':
-            user_obj = User.objects.filter(phone_number = request.data.get('email'), phone_verified = True).first()
+        elif request.data.get('phone_number'):
+            user_obj = User.objects.filter(phone_number = request.data.get('phone_number'), phone_verified = True).first()
             if not user_obj:
-                user_obj = User.objects.filter(phone_number = request.data.get('email')).first()
+                user_obj = User.objects.filter(phone_number = request.data.get('phone_number')).first()
                 if not user_obj:
-                    user_obj = User(phone_number=request.data.get('email')
+                    user_obj = User(phone_number=request.data.get('phone_number')
                             )
                     user_obj.set_password(generate_random_string())
                     user_obj.save()
@@ -414,11 +418,11 @@ class GetTokenByPhoneOTP(APIView):
         try:
             phone_number = PhoneNumber.from_string(request.data['phone_number'])
             user = User.objects.get(phone_number = phone_number)
-            print(user, "KAKAKJSJf")
             phone_obj = PhoneVerification.objects.get(user = user, verified  = False)
             if phone_obj.otp == int(request.data['otp']) and (((datetime.datetime.utcnow().replace(tzinfo=utc) -  phone_obj.verification_time).total_seconds()/60) < 30) :
                 phone_obj.verified = True
                 user.phone_verified = True
+                phone_obj.otp = None
                 phone_obj.save()
                 user.save()
                 # login(request, user)
@@ -776,3 +780,41 @@ class MergeAccount(APIView):
         except Exception as e:
             print(e)
             return Response({"error": "Invalid account"}, status=status.HTTP_404_NOT_FOUND)
+        
+
+class ProfileCommentListCreateView(generics.ListCreateAPIView):
+    queryset = ProfileComment.objects.all()
+    serializer_class = ProfileCommentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class ProfileCommentRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ProfileComment.objects.all()
+    serializer_class = ProfileCommentSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class ProfileLikeCreateView(generics.CreateAPIView):
+    queryset = ProfileLike.objects.all()
+    serializer_class = ProfileLikeSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        profile = serializer.validated_data['profile']
+
+        # Check if the user has already liked the profile
+        if ProfileLike.objects.filter(user=user, profile=profile).exists():
+            raise serializers.ValidationError("You have already liked this profile.")
+
+        # Save the like if the user has not already liked the profile
+        serializer.save(user=user)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class ProfileLikeDestroyView(generics.DestroyAPIView):
+    queryset = ProfileLike.objects.all()
+    serializer_class = ProfileLikeSerializer
+    permission_classes = [IsAuthenticated]

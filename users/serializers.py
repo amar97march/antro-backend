@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import User, UserProfile, AddressBookItem, Organisation, DocumentCategory, Document, OnboardingLink,\
-EmailVerification, PhoneVerification
+EmailVerification, PhoneVerification, TempUser, ProfileComment, ProfileLike
 from organisation.models import Branch
 import random
 from users.utils import send_email_verification_otp, send_verification_otp, generate_random_string
@@ -39,7 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id','email', 'first_name', 'last_name', 'date_of_birth']
+        fields = ['id','email', 'first_name', 'last_name', 'date_of_birth', 'onboarding_complete', 'is_staff']
         read_only_fields = ['email', 'id']
 
     def create(self, validated_data):
@@ -48,8 +48,8 @@ class UserSerializer(serializers.ModelSerializer):
 class TempUserSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = User
-        fields = ['id','email', 'first_name', 'last_name', 'date_of_birth']
+        model = TempUser
+        fields = ['id','email', 'first_name', 'last_name', 'date_of_birth', 'onboarding_complete']
         read_only_fields = ['email', 'id']
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -197,18 +197,6 @@ class PasswordChangeSerializer(serializers.Serializer):
             raise serializers.ValidationError({'current_password': 'Does not match'})
         return value
     
-from profiles.serializers import ProfileSerializer
-class AddressBookItemSerializer(serializers.Serializer):
-
-    class Meta:
-        model = AddressBookItem
-        fields = ''
-
-    def to_representation(self, instance):
-        representation = dict()
-        representation["user"] = instance.user.email
-        representation["profile"] = ProfileSerializer(instance.profile).data 
-        return representation
     
 class OrganisationSerializer(serializers.ModelSerializer):
 
@@ -263,3 +251,37 @@ class OnboardingLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = OnboardingLink
         fields = ('secret',)
+
+
+
+class ProfileCommentSerializer(serializers.ModelSerializer):
+    replies = serializers.SerializerMethodField()
+    class Meta:
+        model = ProfileComment
+        fields = '__all__'
+        read_only_fields = ['user']
+
+    def get_replies(self, obj):
+        # Recursively serialize replies
+        replies_qs = ProfileComment.objects.filter(parent_comment=obj)
+        replies_serializer = ProfileCommentSerializer(replies_qs, many=True)
+        return replies_serializer.data
+
+class ProfileLikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfileLike
+        fields = '__all__'
+        read_only_fields = ['user']
+
+from profiles.serializers import ProfileSerializer
+class AddressBookItemSerializer(serializers.Serializer):
+
+    class Meta:
+        model = AddressBookItem
+        fields = ''
+
+    def to_representation(self, instance):
+        representation = dict()
+        representation["user"] = instance.user.email
+        representation["profile"] = ProfileSerializer(instance.profile).data 
+        return representation

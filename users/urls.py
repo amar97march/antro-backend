@@ -33,5 +33,9 @@ urlpatterns = [
     path('get-user-by-secret/<str:secret>/', GetUserBySecret.as_view(), name='get-user-by-secret'),
     path('add-user-by-secret/', AddUserBySecret.as_view(), name='add-user-by-secret'),
     path('search_users/<str:keyword>/', SearchUsers.as_view(), name='search_users'),
-    path('merge_account/', MergeAccount.as_view(), name='merge-account')
+    path('merge_account/', MergeAccount.as_view(), name='merge-account'),
+    path('profile_comments/', ProfileCommentListCreateView.as_view(), name='comment-list-create'),
+    path('profile_comments/<int:pk>/', ProfileCommentRetrieveUpdateDestroyView.as_view(), name='comment-retrieve-update-destroy'),
+    path('profile_likes/', ProfileLikeCreateView.as_view(), name='like-create'),
+    path('profile_likes/<int:pk>/', ProfileLikeDestroyView.as_view(), name='like-destroy'),
 ]

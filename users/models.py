@@ -146,8 +146,9 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
         instance.userprofile.save()
 
 class TempUser(models.Model):
-    email = models.EmailField(max_length=254, unique=True)
+    email = models.EmailField(max_length=254)
     first_name = models.CharField(max_length=254, null=True, blank=True)
+    phone_number = PhoneNumberField(blank=True, null=True)
     last_name = models.CharField(max_length=254, null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     organisation = models.ForeignKey(
@@ -164,6 +165,24 @@ class TempUser(models.Model):
 
     class Meta:
         unique_together = ('email', 'organisation',)
+
+class TempUserStatus(models.Model):
+    email = models.EmailField(max_length=254)
+    first_name = models.CharField(max_length=254, null=True, blank=True)
+    phone_number = PhoneNumberField(blank=True, null=True)
+    last_name = models.CharField(max_length=254, null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    organisation = models.ForeignKey(
+                Organisation, 
+                on_delete=models.CASCADE, 
+                blank=True, 
+                null=True
+      )
+    upload_status = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.email
 
         
 
@@ -336,7 +355,7 @@ class Document(models.Model):
     
 class OnboardingLink(models.Model):
     user = models.ForeignKey(TempUser, on_delete=models.CASCADE)
-    secret =  models.UUIDField(unique=True, blank = False, null = False)
+    android_deeplink_code = models.CharField(max_length=50, null=True, blank=True)
     link_to_email = models.EmailField(max_length=255, null = False, blank=False, verbose_name="Link Email")
 
     def __str__(self):

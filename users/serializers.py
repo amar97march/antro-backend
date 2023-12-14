@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import User, UserProfile, AddressBookItem, Organisation, DocumentCategory, Document, OnboardingLink,\
-EmailVerification, PhoneVerification, TempUser, ProfileComment, ProfileLike
+EmailVerification, PhoneVerification, TempUser, ProfileComment, ProfileLike, TempUserStatus
 from organisation.models import Branch
 import random
 from users.utils import send_email_verification_otp, send_verification_otp, generate_random_string
@@ -285,3 +285,8 @@ class AddressBookItemSerializer(serializers.Serializer):
         representation["user"] = instance.user.email
         representation["profile"] = ProfileSerializer(instance.profile).data 
         return representation
+    
+class TempUserStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TempUserStatus
+        fields = '__all__'

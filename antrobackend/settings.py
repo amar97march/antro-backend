@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'profiles',
     'chat',
     'organisation',
+    'calendar_manager',
 ]
 
 # AUTH_USER_MODEL = 'users.models.User'

@@ -11,10 +11,10 @@ from django.db.models import Q
 from rest_framework_simplejwt.tokens import OutstandingToken
 from users.models import User, PhoneVerification, UserProfile, RequestData, AddressBookItem,\
 Document, DocumentCategory, OnboardingLink, EmailVerification, ResetPasswordVerification, TempUser , TempUserProfile, AccountMergeRequest,\
-ProfileComment, ProfileLike
+ProfileComment, ProfileLike, TempUserStatus
 from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer, \
 AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer, detect_email_or_phone, HiddenUserSerializer,\
-ProfileCommentSerializer, ProfileLikeSerializer
+ProfileCommentSerializer, ProfileLikeSerializer, TempUserStatusSerializer
 from .utils import send_verification_otp, send_reset_password_otp, send_email_verification_otp, send_email_account_merge_otp
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
@@ -28,6 +28,9 @@ from organisation.models import Group, Branch, Location
 import re
 from users.utils import send_notification, generate_random_string
 from phonenumber_field.phonenumber import PhoneNumber
+
+from django.db.models import Count, DateField, F
+from django.db.models.functions import TruncDate
 
 
 class RegistrationView(APIView):
@@ -91,17 +94,22 @@ class LoginView(APIView):
         # input_type = detect_email_or_phone(request.data.get('email'))
         # request.data.get('email')
         email = request.data.get('email')
+        print("aa", email)
         if email:
             if 'email' not in request.data or 'password' not in request.data:
                 return Response({'data': 'Credentials missing'}, status=status.HTTP_400_BAD_REQUEST)
             email = request.data.get('email')
             password = request.data.get('password')
             user_obj = User.objects.filter(email = request.data.get('email'), email_verified = True).first()
+            print("afasf1", email, password)
             if not user_obj:
                  return Response({'data': 'Invalid Credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-            user = authenticate(request, username=user_obj.user_id, password='password')
+            print("fss", user_obj.user_id)
+            user = authenticate(request, username=user_obj.user_id, password=password)
+            print("user: ", user)
             if user is not None:
                 if not user.active:
+                    print("afasf2")
                     return Response({'data': 'Invalid Credentials'}, status=status.HTTP_401_UNAUTHORIZED)
                 # phone_obj = PhoneVerification.objects.get(user = user)
                 email_obj = EmailVerification.objects.get(user = user)
@@ -119,6 +127,7 @@ class LoginView(APIView):
                                         "id": user.id
                                         }
                 return Response({'data': 'Login Success', **auth_data}, status=status.HTTP_200_OK)
+            print('asf', user)
         elif request.data.get('phone_number'):
             user_obj = User.objects.filter(phone_number = request.data.get('phone_number'), phone_verified = True).first()
             if not user_obj:
@@ -136,9 +145,10 @@ class LoginView(APIView):
             send_verification_otp(user_obj.phone_number, phone_verification_obj.otp)
             return Response({'data': 'OTP Sent'}, status=status.HTTP_200_OK)
         else:
+            print("asf33")
             return Response({'data': 'Invalid Credentials'}, status=status.HTTP_401_UNAUTHORIZED)
             # user = authenticate(request, email=email, password=password)
-        
+        print("asf23")
         return Response({'data': 'Invalid Credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
@@ -242,8 +252,17 @@ class VerifyOTP(APIView):
                     reset_password_obj.save()
                     user.set_password(new_password)
                     user.save()
-
-                    return Response({'data': 'Password resetted'}, status=status.HTTP_200_OK)
+                    auth_data = get_tokens_for_user(user)
+                    auth_data["is_staff"] = user.is_staff
+                    organisation_serializer_obj = OrganisationSerializer(user.organisation)
+                    auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
+                                            "email": user.email,
+                                            "phone_number": str(user.phone_number),
+                                            "first_name": user.first_name,
+                                            "last_name": user.last_name,
+                                            "id": user.id
+                                            }
+                    return Response({'data': 'Password resetted', **auth_data}, status=status.HTTP_200_OK)
                 else:
                     return Response({'error': 'Invalid or expired otp'}, status=status.HTTP_400_BAD_REQUEST)
                 
@@ -309,6 +328,7 @@ class ResetPasswordRequest(APIView):
             reset_obj.otp = 1234 #random.randint(1000, 9999)
             reset_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
             send_reset_password_otp(user_obj.email, reset_obj.otp)
+            reset_obj.updated = False
             reset_obj.save()
             return Response({'data': 'Reset OTP sent'}, status=status.HTTP_200_OK)
 
@@ -386,7 +406,7 @@ class AddAddressBookProfile(APIView):
             return Response({'message': "Profile added to address book"}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print()
+            print(e)
             return Response({'error': 'Error adding address book item'}, status=status.HTTP_400_BAD_REQUEST)
         
 
@@ -444,6 +464,38 @@ class GetTokenByPhoneOTP(APIView):
             print(e)
             return Response({'error': 'Invalid Number or OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
+class CheckOtp(APIView):
+
+    permission_classes = [AllowAny, ]
+
+    def post(self, request):
+        try:
+            email = request.data.get('email')
+            phone_number = request.data.get('phone_number')
+            otp = request.data.get('otp')
+            verification_type = request.data.get('type')
+            if (verification_type == 'email'):
+                user = User.objects.get(email = email)
+                phone_ver_obj = ResetPasswordVerification.objects.get(user = user, updated  = False)
+                if phone_ver_obj.otp == otp:
+                    return Response({'data': 'Correct OTP'}, status=status.HTTP_200_OK)
+                else:
+                    print("ab1")
+                    return Response({'error': 'Invalid Number or OTP'}, status=status.HTTP_400_BAD_REQUEST)
+            elif (verification_type == 'phone'):
+                user = User.objects.get(phone_number = phone_number)
+                phone_ver_obj = PhoneVerification.objects.get(user = user, verified  = False)
+                if phone_ver_obj == otp:
+                    return Response({'data': 'Correct OTP'}, status=status.HTTP_200_OK)
+                else:
+                    print("ab2")
+                    return Response({'error': 'Invalid Number or OTP'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                print("ab3")
+                return Response({'error': 'Invalid Number or OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print("ab4", e)
+            return Response({'error': 'Invalid Number or OTP'}, status=status.HTTP_400_BAD_REQUEST)
 
 class CreateMembersView(APIView):
 
@@ -451,7 +503,7 @@ class CreateMembersView(APIView):
 
     def post(self, request):
         user_obj = User.objects.get(id = request.user.id)
-        members = json.loads(request.data["members"])
+        members = request.data["members"]
 
         not_added_list = []
         for user_obj_dict in members:
@@ -475,15 +527,18 @@ class CreateMembersView(APIView):
                 })
                 continue
             already_present =User.objects.filter(email = user_obj_dict["Email"]).first()
-            
-            if not already_present:
-                reference_date = datetime.datetime(1900, 1, 1)
-                target_date = reference_date + datetime.timedelta(days=user_obj_dict['Date Of Birth'])
+            already_temp = TempUser.objects.filter(email = user_obj_dict["Email"]).first()
+            reference_date = datetime.datetime(1900, 1, 1)
+            target_date = reference_date + datetime.timedelta(days=user_obj_dict['Date Of Birth'])
+            print(user_obj_dict)
+            if not already_present and not already_temp:
+                
                 new_user_obj = TempUser.objects.create(first_name = user_obj_dict["First Name"],
                                                    last_name = user_obj_dict["Last Name"],
                                                    email = user_obj_dict["Email"],
                                                    organisation = request.user.organisation,
                                                    date_of_birth = target_date,
+                                                   phone_number = user_obj_dict["Phone"],
                                                    onboarding_complete = False
                                                    )
                 user_profile_obj = TempUserProfile.objects.create(user = new_user_obj)
@@ -493,12 +548,20 @@ class CreateMembersView(APIView):
                 user_profile_obj.Experience = user_obj_dict['Experience']
                 user_profile_obj.branch = branch_obj
                 user_profile_obj.save()
-                link_uuid = uuid.uuid4()
-                onboard_obj = OnboardingLink.objects.create(user = new_user_obj, secret = link_uuid, link_to_email = user_obj_dict["Email"])
+                # link_uuid = uuid.uuid4()
+                onboard_obj = OnboardingLink.objects.create(user = new_user_obj, android_deeplink_code = generate_random_string(10), link_to_email = user_obj_dict["Email"])
                 email_data = {
                     "receiver_name": user_obj_dict["First Name"],
-                    "link": f"http://localhost:8000/new_onboard_link/{onboard_obj.secret}/"
+                    "link": f"https://antro.page.link/?link=http://dev.antrocorp.com/email?email=dg@gmail.com&apn=com.antro&secret={onboard_obj.android_deeplink_code}"
                 }
+                TempUserStatus.objects.create(first_name = user_obj_dict["First Name"],
+                                                   last_name = user_obj_dict["Last Name"],
+                                                   email = user_obj_dict["Email"],
+                                                   organisation = request.user.organisation,
+                                                   date_of_birth = target_date,
+                                                   phone_number = user_obj_dict["Phone"],
+                                                   upload_status = True
+                                                   )
                 send_notification([user_obj_dict["Email"]], "new_onboard", email_data)
 
             else:
@@ -506,6 +569,14 @@ class CreateMembersView(APIView):
                     "email": user_obj_dict["Email"],
                     "error": "User already present"
                 })
+                TempUserStatus.objects.create(first_name = user_obj_dict["First Name"],
+                                                   last_name = user_obj_dict["Last Name"],
+                                                   email = user_obj_dict["Email"],
+                                                   organisation = request.user.organisation,
+                                                   phone_number = user_obj_dict["Phone"],
+                                                   date_of_birth = target_date,
+                                                   upload_status = False
+                                                   )
             organisation_obj = request.user.organisation
             # organisation_obj.initial_members_added = True
             organisation_obj.save()
@@ -513,7 +584,46 @@ class CreateMembersView(APIView):
         return Response({"status": "Members added",
                              "members_not_added": not_added_list}, status=status.HTTP_201_CREATED)
     
+class DLinkSecretDetails(APIView):
 
+    permission_classes = [AllowAny, ]
+
+    def get(self, request, secret):
+        try:
+            onboard_obj = OnboardingLink.objects.get(android_deeplink_code = secret)
+            data = {
+                "email": onboard_obj.user.email,
+                "first_name": onboard_obj.user.first_name,
+                "last_name": onboard_obj.user.last_name,
+            }
+            return Response(data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": "Invalid Code"}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+class CreateMembersHistoryView(APIView):
+
+    permission_classes = [IsAuthenticated, ]
+
+    def get(self, request): 
+        # grouped_data = TempUserStatus.objects.filter(organisation = request.user.organisation).annotate(date=TruncDate('created_at')).values('date').annotate(count=Count('id'))
+        # print(grouped_data[0])
+        queryset = TempUserStatus.objects.filter(organisation_id=request.user.organisation)
+
+        grouped_data = queryset.annotate(date=TruncDate('created_at')).values('date').annotate(objects=F('id'))
+
+        result_data = {item['date'].strftime('%Y/%m/%d'): [] for item in grouped_data}
+
+        serializer = TempUserStatusSerializer(queryset, many=True)
+
+        for item in serializer.data:
+            date_str = item['created_at'].strftime('%Y/%m/%d')
+            result_data[date_str].append(item)
+        # serializer = TempUserStatusSerializer(grouped_data, many=True)
+
+        return Response(result_data)
 
 class DocumentUpload(APIView):
 

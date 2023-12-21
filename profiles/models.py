@@ -30,12 +30,22 @@ class ProfileCategorySocialSite(models.Model):
 
 from users.models import User
 
+class ProfileManager(models.Manager):
+    def create(self, **kwargs):
+        auto_increment_id = 1
+        while Profile.objects.filter(antro_id=f"antro-0{auto_increment_id:09}"):
+            auto_increment_id += 1
+        kwargs["antro_id"] = f"antro-0{auto_increment_id:09}"
+        return super().create(**kwargs)
+
 class Profile(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='profileuser')
+    antro_id = models.CharField(max_length=20, unique=True, default="")
     first_name = models.CharField(max_length=254, null=True, blank=True)
     last_name = models.CharField(max_length=254, null=True, blank=True)
     email = models.EmailField(max_length=254, default="", null=True, blank=True)
     phone_number = PhoneNumberField(blank=True, null=True)
+    active_profile = models.BooleanField(default = False)
     designation = models.CharField(max_length=100, null=True, blank= True)
     company_name = models.CharField(max_length=100, null = True, blank= True)
     company_sub_heading = models.CharField(max_length=100, null=True, blank= True)
@@ -51,6 +61,8 @@ class Profile(models.Model):
     website = models.URLField(null=True, blank= True)
     profession = models.CharField(max_length=100, null = True, blank= True)
     keywords = models.ManyToManyField(Keyword)
+
+    objects = ProfileManager()
 
     class Meta:
         ordering = ['first_name']

@@ -141,7 +141,7 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
         EmailVerification.objects.create(user=instance)
         profile_cat_obj = ProfileCategory.objects.filter(name='Default').first()
         profile_cat_ss_obj = ProfileCategorySocialSite.objects.filter(name="Default", profile_category = profile_cat_obj).first()
-        Profile.objects.create(user = instance, category = profile_cat_obj, social_site = profile_cat_ss_obj, email = instance.email if instance.email else None, phone_number = instance.phone_number if instance.phone_number else None)
+        Profile.objects.create(user = instance, category = profile_cat_obj, social_site = profile_cat_ss_obj, email = instance.email if instance.email else None, phone_number = instance.phone_number if instance.phone_number else None, active_profile = True)
     else:
         instance.userprofile.save()
 
@@ -159,6 +159,8 @@ class TempUser(models.Model):
       )
     active = models.BooleanField(default=True)
     onboarding_complete = models.BooleanField(default=True)
+    verification_time = models.DateTimeField(null=True, blank=True)
+    otp = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return self.email
@@ -167,7 +169,13 @@ class TempUser(models.Model):
         unique_together = ('email', 'organisation',)
 
 class TempUserStatus(models.Model):
+    UPLOAD_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('failed', 'Failed'),
+        ('completed', 'Completed'),
+    ]
     email = models.EmailField(max_length=254)
+    user_id = models.CharField(max_length=10, blank = True, null = True)
     first_name = models.CharField(max_length=254, null=True, blank=True)
     phone_number = PhoneNumberField(blank=True, null=True)
     last_name = models.CharField(max_length=254, null=True, blank=True)
@@ -178,13 +186,18 @@ class TempUserStatus(models.Model):
                 blank=True, 
                 null=True
       )
-    upload_status = models.BooleanField(default=True)
+    upload_status = models.CharField(
+        max_length=10,
+        choices=UPLOAD_STATUS_CHOICES,
+        default='Pending'
+    )
+    failed_reason = models.CharField(max_length=254, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.email
 
-        
+from profiles.models import Profile,ProfileCategorySocialSite, ProfileCategory        
 
 from organisation.models import Branch
 class UserProfile(models.Model):
@@ -207,18 +220,19 @@ class UserProfile(models.Model):
         image = models.ImageField(upload_to='profile_image', blank=True, null = True)
         gender = models.CharField(default='', blank=True, max_length=20)
         contact_information = models.CharField(null=True, blank= True, max_length=50)
-        Education = models.CharField(null=True, blank= True, max_length=50)
-        Experience = models.FloatField(null=True, blank= True)
+        education = models.CharField(null=True, blank= True, max_length=50)
+        experience = models.FloatField(null=True, blank= True)
         designation = models.CharField(null=True, blank= True, max_length=100)
         skills = models.CharField(null=True, blank= True, max_length=1000)
-        Certifications: models.CharField(null=True, blank= True, max_length=1000)
+        certifications = models.CharField(null=True, blank= True, max_length=1000)
         awards_recognitions = models.CharField(null=True, blank= True, max_length=1000)
         personal_website = models.CharField(null=True, blank= True, max_length=1000)
         conference_event = models.CharField(null=True, blank= True, max_length=1000)
         languages = models.CharField(null=True, blank= True, max_length=1000)
         projects = models.CharField(null=True, blank= True, max_length=1000)
         active = models.BooleanField(default=True)
-        coporate = models.BooleanField(default=False)
+        corporate = models.BooleanField(default=False)
+        profiles = models.ManyToManyField(Profile, related_name='user_profiles')
         
         def __str__(self):
                 return self.user.user_id
@@ -241,10 +255,10 @@ class TempUserProfile(models.Model):
     bio = models.CharField(max_length=200, default='', blank=True)
     gender = models.CharField(default='', blank=True, max_length=20)
     contact_information = models.CharField(null=True, blank= True, max_length=50)
-    Education: models.CharField(null=True, blank= True, max_length=50)
-    Experience: models.FloatField(null=True, blank= True)
-    Skills: models.CharField(null=True, blank= True, max_length=1000)
-    Certifications: models.CharField(null=True, blank= True, max_length=1000)
+    education = models.CharField(null=True, blank= True, max_length=50)
+    experience =  models.FloatField(null=True, blank= True)
+    skills =  models.CharField(null=True, blank= True, max_length=1000)
+    certifications = models.CharField(null=True, blank= True, max_length=1000)
     awards_recognitions = models.CharField(null=True, blank= True, max_length=1000)
     personal_website = models.CharField(null=True, blank= True, max_length=1000)
     conference_event = models.CharField(null=True, blank= True, max_length=1000)
@@ -318,7 +332,7 @@ class RequestData(models.Model):
      def __str__(self):
          return self.user.email
 
-from profiles.models import Profile,ProfileCategorySocialSite, ProfileCategory
+
 
 class AddressBookItem(models.Model):
      

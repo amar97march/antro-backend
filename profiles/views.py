@@ -13,6 +13,12 @@ from .models import Keyword, Profile
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.gis.geos import fromstr
 from django.contrib.gis.db.models.functions import Distance
+import qrcode
+from users.models import UserProfile
+from users.serializers import UserProfileSerializer
+from io import BytesIO
+from django.core.files.base import ContentFile
+import random
 
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -102,3 +108,155 @@ class MyProfilesView(APIView):
                 'status_code': status.HTTP_400_BAD_REQUEST
             }, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+class ProfileData(APIView):
+
+    def get(self, request, id):
+        try:
+            profile_obj = Profile.objects.get(antro_id=id)
+            profile_serializer_obj = ProfileSerializer(profile_obj)
+            return Response({
+                'message': 'successfully retrieve profiles information',
+                'data': profile_serializer_obj.data,
+                'status_code': status.HTTP_200_OK
+            })
+        except Exception as e:
+            print(e)
+            return Response({
+                'message': 'Error fetching profile',
+                'status_code': status.HTTP_400_BAD_REQUEST
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+class ProfileQR(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, id):
+        try:
+            profile_obj = Profile.objects.get(id=id)
+            # profile_serializer_obj = ProfileSerializer(profile_obj)
+            # return Response({
+            #     'message': 'successfully retrieve profiles information',
+            #     'data': profile_serializer_obj.data,
+            #     'status_code': status.HTTP_200_OK
+            # })
+            # content = str(random.randint(1000, 9999))
+            
+            # Generate QR code
+            text = profile_obj.antro_id
+            # text = f"https://antro.page.link/?link=http://dev.antrocorp.com/?profile={profile_obj.antro_id}&apn=com.antro"
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(text)
+            qr.make(fit=True)
+
+            img = qr.make_image(fill_color="black", back_color="white")
+
+            # Save the image to a BytesIO buffer
+            buffer = BytesIO()
+            img.save(buffer, format="PNG")
+
+            # Return the image in the API response
+            response = HttpResponse(buffer.getvalue(), content_type='image/png')
+            response['Content-Disposition'] = 'inline; filename="random_qrcode.png"'
+            return response
+
+        except Exception as e:
+            print(e)
+            return Response({
+                'message': 'Error fetching profile',
+                'status_code': status.HTTP_400_BAD_REQUEST
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class SetActiveProfile(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        profile_id = self.kwargs.get('profile_id')
+
+        try:
+            # Get the profile for the provided profile_id and the logged-in user
+            profile_to_activate = Profile.objects.get(id=profile_id, user=user)
+
+            # Set active_profile to True for the selected profile
+            profile_to_activate.active_profile = True
+            profile_to_activate.save()
+
+            # Set active_profile to False for all other profiles of the user
+            Profile.objects.exclude(id=profile_to_activate.id).filter(user=user).update(active_profile=False)
+
+            # Serialize the updated profile
+            serialized_profile = ProfileSerializer(profile_to_activate)
+
+            return Response(serialized_profile.data, status=status.HTTP_200_OK)
+
+        except Profile.DoesNotExist:
+            return Response({'error': 'Profile not found for the current user.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class SaveProfile(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user_profile = UserProfile.objects.get(user=request.user)
+        profile_id = request.data.get('profile_id')
+
+        try:
+            profile_to_add = Profile.objects.get(id=profile_id)
+            user_profile.profiles.add(profile_to_add)
+            serialized_user_profile = UserProfileSerializer(user_profile)
+            return Response(serialized_user_profile.data, status=status.HTTP_200_OK)
+
+        except Profile.DoesNotExist:
+            return Response({'error': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class UnsaveProfile(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user_profile = UserProfile.objects.get(user=request.user)
+        profile_id = request.data.get('profile_id')
+
+        try:
+            profile_to_remove = Profile.objects.get(id=profile_id)
+            user_profile.profiles.remove(profile_to_remove)
+            serialized_user_profile = UserProfileSerializer(user_profile)
+            return Response(serialized_user_profile.data, status=status.HTTP_200_OK)
+
+        except Profile.DoesNotExist:
+            return Response({'error': 'Profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GetSavedProfiles(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+            user_profiles = user_profile.profiles.all()
+            
+            # Serialize the profiles
+            serialized_profiles = ProfileSerializer(user_profiles, many=True)
+
+            return Response({
+                "user_profiles": serialized_profiles.data
+            }, status=status.HTTP_200_OK)
+
+        except UserProfile.DoesNotExist:
+            return Response({'error': 'User profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

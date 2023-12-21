@@ -14,7 +14,7 @@ Document, DocumentCategory, OnboardingLink, EmailVerification, ResetPasswordVeri
 ProfileComment, ProfileLike, TempUserStatus
 from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer, \
 AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer, detect_email_or_phone, HiddenUserSerializer,\
-ProfileCommentSerializer, ProfileLikeSerializer, TempUserStatusSerializer
+ProfileCommentSerializer, ProfileLikeSerializer, TempUserStatusSerializer, DetailUserSerializer
 from .utils import send_verification_otp, send_reset_password_otp, send_email_verification_otp, send_email_account_merge_otp
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
@@ -83,7 +83,27 @@ class UserData(APIView):
             return Response({'request_id':id, 'response_data': 'Invalid request id'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UserDataById(APIView):
 
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, id):
+
+        try:
+            user_obj = User.objects.get(id = request.user.id)
+            # organisation_serializer_obj = OrganisationSerializer(user_obj.organisation)
+            data_user_obj = User.objects.get(user_id = id)
+
+            if (data_user_obj.organisation == user_obj.organisation):
+                user_data = DetailUserSerializer(data_user_obj)
+                return Response({'response_data': user_data.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Not permitted'}, status=status.HTTP_400_BAD_REQUEST)
+
+           
+        except Exception as e:
+            print(e)
+            return Response({'request_id':id, 'response_data': 'Invalid request id'}, status=status.HTTP_400_BAD_REQUEST)
 
       
 class LoginView(APIView):
@@ -229,6 +249,14 @@ class VerifyOTP(APIView):
                                             "last_name": user.last_name,
                                             "id": user.id
                                             }
+                    TempUserStatus.objects.create(first_name = user.first_name,
+                                                   last_name = user.last_name,
+                                                   email = user.email,
+                                                   organisation = user.organisation,
+                                                   date_of_birth = user.date_of_birth,
+                                                   phone_number = user.phone_number,
+                                                   upload_status = 'completed'
+                                                   )
                     auth_data = get_tokens_for_user(user)
                     auth_data["is_staff"] = user.is_staff
                     organisation_serializer_obj = OrganisationSerializer(user.organisation)
@@ -244,27 +272,85 @@ class VerifyOTP(APIView):
                 else:
                     return Response({'error': 'Invalid or expired otp'}, status=status.HTTP_400_BAD_REQUEST)
             elif (verification_type == "reset_password"):
-                user = User.objects.get(email = email)
-                reset_password_obj = ResetPasswordVerification.objects.get(user = user)
-                if reset_password_obj.verification_time > datetime.datetime.utcnow().replace(tzinfo=utc) and reset_password_obj.otp == int(otp):
-                    reset_password_obj.updated = True
-                    reset_password_obj.otp = None
-                    reset_password_obj.save()
-                    user.set_password(new_password)
-                    user.save()
-                    auth_data = get_tokens_for_user(user)
-                    auth_data["is_staff"] = user.is_staff
-                    organisation_serializer_obj = OrganisationSerializer(user.organisation)
-                    auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
-                                            "email": user.email,
-                                            "phone_number": str(user.phone_number),
-                                            "first_name": user.first_name,
-                                            "last_name": user.last_name,
-                                            "id": user.id
-                                            }
-                    return Response({'data': 'Password resetted', **auth_data}, status=status.HTTP_200_OK)
+                temp_user_obj = TempUser.objects.filter(email = email).first()
+                if temp_user_obj:
+                    if temp_user_obj.verification_time > datetime.datetime.utcnow().replace(tzinfo=utc) and temp_user_obj.otp == int(otp):
+                        temp_user_obj.onboarding_complete = True
+                        temp_user_obj.otp = None
+
+                        
+                        onboarding_obj = OnboardingLink.objects.filter(user=temp_user_obj).first()
+                        onboarding_obj.android_deeplink_code = None
+                        onboarding_obj.save()
+                        user = User.objects.create(email = temp_user_obj.email,
+                                                   first_name = temp_user_obj.first_name,
+                                                   last_name = temp_user_obj.last_name,
+                                                   phone_number = temp_user_obj.phone_number,
+                                                   date_of_birth = temp_user_obj.date_of_birth,
+                                                   organisation = temp_user_obj.organisation
+                                                   )
+                        temp_user_profile_obj = TempUserProfile.objects.filter(user = temp_user_obj).first()
+                        user_profile_obj = UserProfile.objects.filter(user = user).first()
+                        user_profile_obj.branch = temp_user_profile_obj.branch
+                        user_profile_obj.bio = temp_user_profile_obj.bio
+                        user_profile_obj.gender = temp_user_profile_obj.gender
+                        user_profile_obj.contact_information = temp_user_profile_obj.contact_information
+                        user_profile_obj.education = temp_user_profile_obj.education
+                        user_profile_obj.experience = temp_user_profile_obj.experience
+                        user_profile_obj.skills = temp_user_profile_obj.skills
+                        user_profile_obj.certifications = temp_user_profile_obj.certifications
+                        user_profile_obj.awards_recognitions = temp_user_profile_obj.awards_recognitions
+                        user_profile_obj.personal_website = temp_user_profile_obj.personal_website
+                        user_profile_obj.conference_event = temp_user_profile_obj.conference_event
+                        user_profile_obj.languages = temp_user_profile_obj.languages
+                        user_profile_obj.projects = temp_user_profile_obj.projects
+                        user_profile_obj.corporate = True
+                        user_profile_obj.save()
+                        temp_user_profile_obj.active = False
+                        temp_user_profile_obj.save()
+                        temp_user_obj.active = False
+                        temp_user_obj.save()
+                        temp_user_status = TempUserStatus.objects.filter(email = user.email).first()
+                        temp_user_status.upload_status = 'completed'
+                        temp_user_status.user_id = user.user_id
+                        temp_user_status.save()
+                        user.set_password(new_password)
+                        user.save()
+                        auth_data = get_tokens_for_user(user)
+                        auth_data["is_staff"] = user.is_staff
+                        organisation_serializer_obj = OrganisationSerializer(user.organisation)
+                        auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
+                                                "email": user.email,
+                                                "phone_number": str(user.phone_number),
+                                                "first_name": user.first_name,
+                                                "last_name": user.last_name,
+                                                "id": user.id
+                                                }
+                        return Response({'data': 'Password resetted', **auth_data}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({'error': 'Invalid or expired otp'}, status=status.HTTP_400_BAD_REQUEST)
                 else:
-                    return Response({'error': 'Invalid or expired otp'}, status=status.HTTP_400_BAD_REQUEST)
+                    user = User.objects.get(email = email)
+                    reset_password_obj = ResetPasswordVerification.objects.get(user = user)
+                    if reset_password_obj.verification_time > datetime.datetime.utcnow().replace(tzinfo=utc) and reset_password_obj.otp == int(otp):
+                        reset_password_obj.updated = True
+                        reset_password_obj.otp = None
+                        reset_password_obj.save()
+                        user.set_password(new_password)
+                        user.save()
+                        auth_data = get_tokens_for_user(user)
+                        auth_data["is_staff"] = user.is_staff
+                        organisation_serializer_obj = OrganisationSerializer(user.organisation)
+                        auth_data['user_data'] = {"organisation": organisation_serializer_obj.data,
+                                                "email": user.email,
+                                                "phone_number": str(user.phone_number),
+                                                "first_name": user.first_name,
+                                                "last_name": user.last_name,
+                                                "id": user.id
+                                                }
+                        return Response({'data': 'Password resetted', **auth_data}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({'error': 'Invalid or expired otp'}, status=status.HTTP_400_BAD_REQUEST)
                 
             else:
                 return Response({'error': 'Invalid type'}, status=status.HTTP_400_BAD_REQUEST)
@@ -542,17 +628,16 @@ class CreateMembersView(APIView):
                                                    onboarding_complete = False
                                                    )
                 user_profile_obj = TempUserProfile.objects.create(user = new_user_obj)
-                user_profile_obj.phone_number = user_obj_dict['Phone']
                 user_profile_obj.gender = user_obj_dict['Gender']
-                user_profile_obj.Education = user_obj_dict['Education']
-                user_profile_obj.Experience = user_obj_dict['Experience']
+                user_profile_obj.education = user_obj_dict['Education']
+                user_profile_obj.experience = user_obj_dict['Experience']
                 user_profile_obj.branch = branch_obj
                 user_profile_obj.save()
                 # link_uuid = uuid.uuid4()
                 onboard_obj = OnboardingLink.objects.create(user = new_user_obj, android_deeplink_code = generate_random_string(10), link_to_email = user_obj_dict["Email"])
                 email_data = {
                     "receiver_name": user_obj_dict["First Name"],
-                    "link": f"https://antro.page.link/?link=http://dev.antrocorp.com/email?email=dg@gmail.com&apn=com.antro&secret={onboard_obj.android_deeplink_code}"
+                    "link": f"https://antro.page.link/?link=http://dev.antrocorp.com/?secret={onboard_obj.android_deeplink_code}&apn=com.antro"
                 }
                 TempUserStatus.objects.create(first_name = user_obj_dict["First Name"],
                                                    last_name = user_obj_dict["Last Name"],
@@ -560,7 +645,7 @@ class CreateMembersView(APIView):
                                                    organisation = request.user.organisation,
                                                    date_of_birth = target_date,
                                                    phone_number = user_obj_dict["Phone"],
-                                                   upload_status = True
+                                                   upload_status = 'pending'
                                                    )
                 send_notification([user_obj_dict["Email"]], "new_onboard", email_data)
 
@@ -575,7 +660,8 @@ class CreateMembersView(APIView):
                                                    organisation = request.user.organisation,
                                                    phone_number = user_obj_dict["Phone"],
                                                    date_of_birth = target_date,
-                                                   upload_status = False
+                                                   upload_status = 'failed',
+                                                   failed_reason = "User already present"
                                                    )
             organisation_obj = request.user.organisation
             # organisation_obj.initial_members_added = True
@@ -591,6 +677,15 @@ class DLinkSecretDetails(APIView):
     def get(self, request, secret):
         try:
             onboard_obj = OnboardingLink.objects.get(android_deeplink_code = secret)
+            temp_user_obj = onboard_obj.user
+            temp_user_obj.otp = 1234 #random.randint(1000, 9999)
+            temp_user_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
+            temp_user_obj.merged = False
+            temp_user_obj.save()
+            if (temp_user_obj.phone_number):
+                send_verification_otp(temp_user_obj.phone_number, temp_user_obj.otp)
+            if (temp_user_obj.email):
+                send_email_account_merge_otp(temp_user_obj.email, temp_user_obj.otp)
             data = {
                 "email": onboard_obj.user.email,
                 "first_name": onboard_obj.user.first_name,
@@ -599,6 +694,7 @@ class DLinkSecretDetails(APIView):
             return Response(data, status=status.HTTP_200_OK)
 
         except Exception as e:
+            print(e)
             return Response({"error": "Invalid Code"}, status=status.HTTP_404_NOT_FOUND)
 
 

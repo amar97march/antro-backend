@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from chat.models import Chat, Contact
 from chat.views import get_user_contact
 from .serializers import GroupSerializer, LocationSerializer, BranchSerializer, BranchBroadcastHistorySerializer
-from users.serializers import UserSerializer, TempUserSerializer
+from users.serializers import UserSerializer, TempUserSerializer, TempUserStatusSerializer
 from rest_framework.response import Response
 from rest_framework import status
 import openpyxl
@@ -12,8 +12,9 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from openpyxl.worksheet.datavalidation import DataValidation
+from django.db.models import Q
 from ..utils import broadcast_to_branches_by_list, is_admin_of_group_or_parent, get_messages_of_group_and_children
-from users.models import TempUser
+from users.models import TempUser, TempUserStatus
 User = get_user_model()
 
 
@@ -272,15 +273,55 @@ class OrganisationMembersView(APIView):
         
         try:
             organistion_obj = Organisation.objects.get(id = request.user.organisation.id)
+            sort_by = request.GET.get('sort_by', [])
+            search_keyword = request.GET.get('search_keyword', '')
 
-            users_list = User.objects.filter(organisation = organistion_obj)
-            user_serializer_obj = UserSerializer(users_list, many=True)
+            # users_list = User.objects.filter(organisation = organistion_obj)
+            # user_serializer_obj = UserSerializer(users_list, many=True)
 
-            temp_user_list = TempUser.objects.filter(organisation = organistion_obj, onboarding_complete = False)
-            temp_user_serializer_obj = TempUserSerializer(temp_user_list, many=True)
+            temp_user_list = TempUserStatus.objects.filter(organisation = organistion_obj, upload_status__in = ['pending', 'completed']).order_by('created_at')
+            if search_keyword:
+                temp_user_list = temp_user_list.filter(
+                    Q(first_name__icontains=search_keyword) |
+                    Q(last_name__icontains=search_keyword) |
+                    Q(email__icontains=search_keyword)
+                )
+
+            # Sort users based on provided fields
+            if sort_by:
+                print(sort_by)
+                sort_by_mapped = sort_by
+                if (sort_by == 'name'):
+                    sort_by_mapped = 'first_name'
+                elif (sort_by == 'status'):
+                    sort_by_mapped = 'upload_status'
+                temp_user_list = temp_user_list.order_by(sort_by_mapped)
+            
+            
+            temp_user_serializer_obj = TempUserStatusSerializer(temp_user_list, many=True)
 
             return Response({
-                "members": user_serializer_obj.data + temp_user_serializer_obj.data
+                "members": temp_user_serializer_obj.data
+            })
+        
+        except Exception as e:
+            print(e)
+            return Response({'error': 'Not part of an organisation'}, status=status.HTTP_400_BAD_REQUEST)
+
+class FailedUploadMembers(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        
+        try:
+            organistion_obj = Organisation.objects.get(id = request.user.organisation.id)
+
+            temp_user_list = TempUserStatus.objects.filter(organisation = organistion_obj, upload_status__in = ['failed']).order_by('created_at')
+            
+            temp_user_serializer_obj = TempUserStatusSerializer(temp_user_list, many=True)
+
+            return Response({
+                "members": temp_user_serializer_obj.data
             })
         
         except Exception as e:

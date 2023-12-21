@@ -8,6 +8,7 @@ app_name = 'users'
 
 urlpatterns = [
     path('register/', RegistrationView.as_view(), name='register'),
+    path('get_user_data/<str:id>/', UserDataById.as_view(), name='user_data_by_id'),
     path('get_user_data/', UserData.as_view(), name='user_data'),
     path('create_organisation/', OrgansationView.as_view(), name="organisation_view"),
     path('create_members/', CreateMembersView.as_view(), name="create_members_view"),

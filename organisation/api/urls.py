@@ -13,7 +13,8 @@ from .views import (
     BranchBroadcastHistoryView,
     UpdatePermissions,
     GroupDetails,
-    UpdateGroupMessage)
+    UpdateGroupMessage,
+    FailedUploadMembers)
 
 app_name = 'broadcast'
 
@@ -25,6 +26,7 @@ urlpatterns = [
     path('participant/', ParticipantView.as_view()),
     path('update_permissions/', UpdatePermissions.as_view()),
     path('organisation_members/', OrganisationMembersView.as_view()),
+    path('failed_member_uploads/', FailedUploadMembers.as_view()),
     path('locations/', LocationView.as_view()),
     path('location_branches/<str:id>', LocationBranchesView.as_view()),
     path('branch/', BranchView.as_view()),

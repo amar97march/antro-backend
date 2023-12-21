@@ -39,7 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id','email', 'first_name', 'last_name', 'date_of_birth', 'onboarding_complete', 'is_staff']
+        fields = ['id', 'user_id','email', 'first_name', 'last_name', 'date_of_birth', 'onboarding_complete', 'is_staff']
         read_only_fields = ['email', 'id']
 
     def create(self, validated_data):
@@ -49,7 +49,14 @@ class TempUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TempUser
-        fields = ['id','email', 'first_name', 'last_name', 'date_of_birth', 'onboarding_complete']
+        fields = ['id', 'email', 'first_name', 'last_name', 'date_of_birth', 'onboarding_complete']
+        read_only_fields = ['email', 'id']
+
+class TempUserStatusSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = TempUserStatus
+        fields = ['id', 'email', 'first_name', 'last_name', 'date_of_birth', 'onboarding_complete']
         read_only_fields = ['email', 'id']
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -92,8 +99,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 data["branch"] = None
         else:
                 data["branch"] = None
+        print(data, 'AA')
         if data["image"]:
-            data ['image'] = "https://dev.antrocorp.com" + str(data["image"])
+            data['image'] = "https://dev.antrocorp.com" + str(data["image"])
         return data
     
 
@@ -290,3 +298,11 @@ class TempUserStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = TempUserStatus
         fields = '__all__'
+
+class DetailUserSerializer(serializers.ModelSerializer):
+    user_profile = UserProfileSerializer(required=False, source='userprofile')
+    profiles = ProfileSerializer(many=True, required=True, source='profileuser')
+
+    class Meta:
+        model = User
+        fields = ("user_id", "email", "phone_number", "first_name", "last_name", "date_of_birth", "organisation", "is_staff", "is_admin", "is_active", "active", "email_verified", "phone_verified", "verified_by_antro", "verified_by_user", "verified_by_organisation", "last_login", "date_joined", "onboarding_complete", "user_profile","profiles")

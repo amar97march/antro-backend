@@ -201,41 +201,44 @@ from profiles.models import Profile,ProfileCategorySocialSite, ProfileCategory
 
 from organisation.models import Branch
 class UserProfile(models.Model):
-        user = models.OneToOneField(
-                User, 
-                on_delete=models.CASCADE, 
-                blank=True, 
-                null=True, 
-                unique=True,
-                related_name='userprofile'
-        )
-        branch = models.ForeignKey(
-                Branch, 
-                on_delete=models.CASCADE, 
-                blank=True, 
-                null=True
-      )
-        bio = models.CharField(max_length=200, default='', blank=True)
-        phone_number = PhoneNumberField(blank=True, null=True)
-        image = models.ImageField(upload_to='profile_image', blank=True, null = True)
-        gender = models.CharField(default='', blank=True, max_length=20)
-        contact_information = models.CharField(null=True, blank= True, max_length=50)
-        education = models.CharField(null=True, blank= True, max_length=50)
-        experience = models.FloatField(null=True, blank= True)
-        designation = models.CharField(null=True, blank= True, max_length=100)
-        skills = models.CharField(null=True, blank= True, max_length=1000)
-        certifications = models.CharField(null=True, blank= True, max_length=1000)
-        awards_recognitions = models.CharField(null=True, blank= True, max_length=1000)
-        personal_website = models.CharField(null=True, blank= True, max_length=1000)
-        conference_event = models.CharField(null=True, blank= True, max_length=1000)
-        languages = models.CharField(null=True, blank= True, max_length=1000)
-        projects = models.CharField(null=True, blank= True, max_length=1000)
-        active = models.BooleanField(default=True)
-        corporate = models.BooleanField(default=False)
-        profiles = models.ManyToManyField(Profile, related_name='user_profiles')
-        
-        def __str__(self):
-                return self.user.user_id
+    user = models.OneToOneField(
+            User, 
+            on_delete=models.CASCADE, 
+            blank=True, 
+            null=True, 
+            unique=True,
+            related_name='userprofile'
+    )
+    branch = models.ForeignKey(
+            Branch, 
+            on_delete=models.CASCADE, 
+            blank=True, 
+            null=True
+    )
+    bio = models.CharField(max_length=200, default='', blank=True)
+    phone_number = PhoneNumberField(blank=True, null=True)
+    image = models.ImageField(upload_to='profile_image', blank=True, null = True)
+    gender = models.CharField(default='', blank=True, max_length=20)
+    contact_information = models.CharField(null=True, blank= True, max_length=50)
+    education = models.CharField(null=True, blank= True, max_length=50)
+    experience = models.FloatField(null=True, blank= True)
+    designation = models.CharField(null=True, blank= True, max_length=100)
+    skills = models.CharField(null=True, blank= True, max_length=1000)
+    certifications = models.CharField(null=True, blank= True, max_length=1000)
+    awards_recognitions = models.CharField(null=True, blank= True, max_length=1000)
+    personal_website = models.CharField(null=True, blank= True, max_length=1000)
+    conference_event = models.CharField(null=True, blank= True, max_length=1000)
+    languages = models.CharField(null=True, blank= True, max_length=1000)
+    projects = models.CharField(null=True, blank= True, max_length=1000)
+    active = models.BooleanField(default=True)
+    corporate = models.BooleanField(default=False)
+    profiles = models.ManyToManyField(Profile, related_name='user_profiles')
+    
+    def __str__(self):
+            return self.user.user_id
+    
+    def has_profile(self, profile):
+        return self.profiles.filter(id=profile.id).exists()
         
 class TempUserProfile(models.Model):
     user = models.OneToOneField(

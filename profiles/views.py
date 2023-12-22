@@ -77,7 +77,7 @@ class SearchProfileView(APIView):
                 queryset = queryset.annotate(distance=Distance('location', user_location)).filter(distance__lte = distance)
                 if 'profession' in request.data:
                     queryset = queryset.filter(profession__icontains = request.data['profession'])
-            profile_serializer_obj = ProfileSerializer(queryset, many=True)
+            profile_serializer_obj = ProfileSerializer(queryset, many=True, context={'request': request})
             return Response({
                 'message': 'successfully retrieve profiles information',
                 'data': profile_serializer_obj.data,
@@ -95,7 +95,27 @@ class MyProfilesView(APIView):
     def get(self, request):
         try:
             queryset = Profile.objects.filter(user=request.user).order_by('first_name')
-            profile_serializer_obj = ProfileSerializer(queryset, many=True)
+            profile_serializer_obj = ProfileSerializer(queryset, many=True, context={'request': request})
+            return Response({
+                'message': 'successfully retrieve profiles information',
+                'data': profile_serializer_obj.data,
+                'status_code': status.HTTP_200_OK
+            })
+        except Exception as e:
+            print(e)
+            return Response({
+                'message': 'Error fetching profiles',
+                'status_code': status.HTTP_400_BAD_REQUEST
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SimilarProfilesView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, id):
+        try:
+            similar_profiles = Profile.objects.get(id=id).find_similar_profiles()
+            # similar_profiles = Profile.objects.find_similar_profiles(profile_obj)
+            profile_serializer_obj = ProfileSerializer(similar_profiles, many=True, context={'request': request})
             return Response({
                 'message': 'successfully retrieve profiles information',
                 'data': profile_serializer_obj.data,
@@ -115,7 +135,7 @@ class ProfileData(APIView):
     def get(self, request, id):
         try:
             profile_obj = Profile.objects.get(antro_id=id)
-            profile_serializer_obj = ProfileSerializer(profile_obj)
+            profile_serializer_obj = ProfileSerializer(profile_obj, context={'request': request})
             return Response({
                 'message': 'successfully retrieve profiles information',
                 'data': profile_serializer_obj.data,
@@ -192,7 +212,7 @@ class SetActiveProfile(APIView):
             Profile.objects.exclude(id=profile_to_activate.id).filter(user=user).update(active_profile=False)
 
             # Serialize the updated profile
-            serialized_profile = ProfileSerializer(profile_to_activate)
+            serialized_profile = ProfileSerializer(profile_to_activate, context={'request': request})
 
             return Response(serialized_profile.data, status=status.HTTP_200_OK)
 
@@ -211,7 +231,7 @@ class SaveProfile(APIView):
         try:
             profile_to_add = Profile.objects.get(id=profile_id)
             user_profile.profiles.add(profile_to_add)
-            serialized_user_profile = UserProfileSerializer(user_profile)
+            serialized_user_profile = UserProfileSerializer(user_profile, )
             return Response(serialized_user_profile.data, status=status.HTTP_200_OK)
 
         except Profile.DoesNotExist:
@@ -249,7 +269,7 @@ class GetSavedProfiles(APIView):
             user_profiles = user_profile.profiles.all()
             
             # Serialize the profiles
-            serialized_profiles = ProfileSerializer(user_profiles, many=True)
+            serialized_profiles = ProfileSerializer(user_profiles, many=True, context={'request': request})
 
             return Response({
                 "user_profiles": serialized_profiles.data

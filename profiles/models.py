@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from django.db.models import Q
 from phonenumber_field.modelfields import PhoneNumberField
 
 
@@ -37,6 +38,26 @@ class ProfileManager(models.Manager):
             auto_increment_id += 1
         kwargs["antro_id"] = f"antro-0{auto_increment_id:09}"
         return super().create(**kwargs)
+    
+    def find_similar_profiles(self, profile):
+        # Define the criteria for similarity
+        similarity_criteria = (
+            Q(category=profile.category) |
+            Q(social_site=profile.social_site) |
+            # Q(location=profile.location) |
+            # Q(address=profile.address) |
+            Q(city=profile.city) |
+            # Q(contact_number_1=profile.contact_number_1) |
+            # Q(contact_number_2=profile.contact_number_2) |
+            Q(website=profile.website) |
+            Q(profession=profile.profession) |
+            Q(keywords__in=profile.keywords.all())
+        )
+
+        # Exclude the input profile from the results
+        similar_profiles = self.exclude(id=profile.id).filter(similarity_criteria).distinct()
+
+        return similar_profiles
 
 class Profile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='profileuser')
@@ -69,3 +90,7 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user.user_id
+    
+    def find_similar_profiles(self):
+        return Profile.objects.find_similar_profiles(self)
+    

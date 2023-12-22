@@ -5,7 +5,7 @@ from dataclasses import field
 from pyexpat import model
 from rest_framework import serializers
 from users.serializers import ProfileCommentSerializer
-from users.models import ProfileComment
+from users.models import ProfileComment, UserProfile
 from .models import Profile
 
 
@@ -31,3 +31,16 @@ class ProfileSerializer(serializers.ModelSerializer):
     def get_all_comments_count(self, obj):
         # Count all comments for the profile
         return ProfileComment.objects.filter(profile=obj).count()
+    
+    def to_representation(self, data):
+        request = self.context.get("request")
+        validated_data = super(ProfileSerializer, self).to_representation(data)
+        if request and hasattr(request, "user"):
+            user_profile = UserProfile.objects.get(user=request.user)
+            if user_profile.has_profile(data):
+                validated_data['saved'] = True
+            else:
+                validated_data['saved'] = False
+        else:
+            validated_data['saved'] = False
+        return validated_data

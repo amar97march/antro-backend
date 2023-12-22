@@ -11,6 +11,7 @@ urlpatterns = [
     path('profiles/', ProfileView.as_view(), name='profile'),
     path('search/', SearchProfileView.as_view(), name='search'),
     path('my_profiles/', MyProfilesView.as_view(), name='my_profiles'),
+    path('similar_profiles/<int:id>/', SimilarProfilesView.as_view(), name='similar_profiles'),
     path('get_profile_qr/<int:id>/', ProfileQR.as_view(), name="profile_qr"),
     path('get_profile/<str:id>/', ProfileData.as_view(), name="profile_data"),
     path('set_active_profile/<int:profile_id>/', SetActiveProfile.as_view(), name='set_active_profile'),

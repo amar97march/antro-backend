@@ -78,7 +78,7 @@ def send_notification(emails, type, data):
     msg = EmailMessage()
 
     msg['From'] = EMAIL_ADDRESS
-    msg['To'] = ["amar97march@gmail.com"] #emails
+    msg['To'] = emails
 
     if type == "new_onboard":
         msg['Subject'] = 'You are invited to antro'

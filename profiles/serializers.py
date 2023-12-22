@@ -12,6 +12,7 @@ from .models import Profile
 class ProfileSerializer(serializers.ModelSerializer):
     comments = serializers.SerializerMethodField()
     likes_count = serializers.SerializerMethodField()
+    all_comments_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -26,3 +27,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_likes_count(self, obj):
         return obj.likes.count()
+    
+    def get_all_comments_count(self, obj):
+        # Count all comments for the profile
+        return ProfileComment.objects.filter(profile=obj).count()

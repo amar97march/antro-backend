@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from .serializers import ProfileSerializer
 from django.utils.timezone import utc
 import datetime
-from .models import Keyword, Profile
+from .models import Keyword, Profile, ProfileCategory
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.gis.geos import fromstr
 from django.contrib.gis.db.models.functions import Distance
@@ -67,14 +67,33 @@ class SearchProfileView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
-            queryset = Profile.objects.all().order_by('name')
+            queryset = Profile.objects.all().order_by('first_name')
             if request.data['location']:
                 longitude = request.data['location']['longitude']
                 latitude = request.data['location']['latitude']
                 distance = request.data['location']['distance']
+                sort_by = request.data['sort_by']
+                category = request.data['category']
 
                 user_location = fromstr(f'POINT({longitude} {latitude})', srid=4326)
                 queryset = queryset.annotate(distance=Distance('location', user_location)).filter(distance__lte = distance)
+                if sort_by:
+                    sort_by_mapped = sort_by
+                    if (sort_by == 'name'):
+                        sort_by_mapped = 'first_name'
+                    elif (sort_by == 'status'):
+                        sort_by_mapped = 'upload_status'
+                    queryset = queryset.order_by(sort_by_mapped)
+                if category:
+                    try:
+                        category_obj = ProfileCategory.objects.get(id = int(category))
+                        queryset = queryset.filter(category = category_obj)
+                    except:
+                        return Response({
+                            'message': 'Invalid category',
+                            'status_code': status.HTTP_400_BAD_REQUEST
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
                 if 'profession' in request.data:
                     queryset = queryset.filter(profession__icontains = request.data['profession'])
             profile_serializer_obj = ProfileSerializer(queryset, many=True, context={'request': request})

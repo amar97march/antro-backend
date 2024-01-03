@@ -595,6 +595,7 @@ class CreateMembersView(APIView):
         for user_obj_dict in members:
             input_string = "sagg sagag(bcb3c47e-c74e-4779-a24f-bc529f7b69c0)"
             uuid_pattern = re.compile(r'([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})')
+            print(user_obj_dict)
             match = uuid_pattern.search(user_obj_dict["Branch"])
 
             if match:

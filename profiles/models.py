@@ -82,6 +82,9 @@ class Profile(models.Model):
     website = models.URLField(null=True, blank= True)
     profession = models.CharField(max_length=100, null = True, blank= True)
     keywords = models.ManyToManyField(Keyword)
+    verified_by_antro = models.BooleanField(default=False)
+    verified_by_user = models.BooleanField(default=False)
+    verified_by_organisation = models.BooleanField(default=False)
 
     objects = ProfileManager()
 

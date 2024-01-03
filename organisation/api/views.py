@@ -133,6 +133,19 @@ class SendBroadcast(APIView):
 
 class BranchView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            
+            branch_objs = Branch.objects.filter(organisation = request.user.organisation)
+            serializer = BranchSerializer(branch_objs, many = True)
+            return Response({
+            "status": 200,
+            'message': 'Records found',
+            'data': serializer.data
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     def post(self, request):
         serializer = BranchSerializer(data = request.data, context={'request': request})

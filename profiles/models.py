@@ -62,14 +62,15 @@ class ProfileManager(models.Manager):
 class Profile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='profileuser')
     antro_id = models.CharField(max_length=20, unique=True, default="")
-    first_name = models.CharField(max_length=254, null=True, blank=True)
-    last_name = models.CharField(max_length=254, null=True, blank=True)
+    # first_name = models.CharField(max_length=254, null=True, blank=True)
+    name = models.CharField(max_length=254, null=False, blank=False)
     email = models.EmailField(max_length=254, default="", null=True, blank=True)
     phone_number = PhoneNumberField(blank=True, null=True)
     active_profile = models.BooleanField(default = False)
     designation = models.CharField(max_length=100, null=True, blank= True)
     company_name = models.CharField(max_length=100, null = True, blank= True)
     company_sub_heading = models.CharField(max_length=100, null=True, blank= True)
+    about = models.CharField(max_length=100, null=True, blank= True)
     category = models.ForeignKey(ProfileCategory, on_delete=models.CASCADE)
     category_custom = models.CharField(max_length=100, null=True, blank=True)
     social_site = models.ForeignKey(ProfileCategorySocialSite, on_delete=models.CASCADE)
@@ -77,6 +78,8 @@ class Profile(models.Model):
     location = models.PointField(null=True, default=None)
     address = models.CharField(max_length=100, null = True, blank= True)
     city = models.CharField(max_length=50, null = True, blank= True)
+    country = models.CharField(max_length=50, null = True, blank= True)
+    postal_code = models.IntegerField(null = True, blank= True)
     contact_number_1 = models.CharField(null=True, blank= True, max_length=50)
     contact_number_2 = models.CharField(null=True, blank= True, max_length=50)
     website = models.URLField(null=True, blank= True)
@@ -85,11 +88,12 @@ class Profile(models.Model):
     verified_by_antro = models.BooleanField(default=False)
     verified_by_user = models.BooleanField(default=False)
     verified_by_organisation = models.BooleanField(default=False)
+    image = models.ImageField(upload_to='profile_image', blank=True, null = True)
 
     objects = ProfileManager()
 
     class Meta:
-        ordering = ['first_name']
+        ordering = ['name']
 
     def __str__(self):
         return self.user.user_id

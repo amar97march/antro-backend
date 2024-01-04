@@ -46,8 +46,7 @@ class RegistrationView(APIView):
                 user_profile_obj.designation = request.data.get('designation')
                 user_profile_obj.save()
                 profile_obj = Profile.objects.get(user = user_obj)
-                profile_obj.first_name = user_obj.first_name
-                profile_obj.last_name = user_obj.last_name
+                profile_obj.name = user_obj.first_name + " " + user_obj.last_name
                 profile_obj.designation = request.data.get('designation')
                 profile_obj.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -753,7 +752,7 @@ class DocumentUpload(APIView):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
-class AddProfilePicture(APIView):
+class AddUserProfilePicture(APIView):
 
     permission_classes = [IsAuthenticated]
 

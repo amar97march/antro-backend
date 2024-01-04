@@ -6,14 +6,15 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import  Response
 from rest_framework.views import APIView
-from .serializers import ProfileSerializer
+from .serializers import ProfileSerializer, ProfileCategorySerializer, ProfileCategorySocialSiteSerializer
 from django.utils.timezone import utc
 import datetime
-from .models import Keyword, Profile, ProfileCategory
+from .models import Keyword, Profile, ProfileCategory, ProfileCategorySocialSite
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.gis.geos import fromstr
 from django.contrib.gis.db.models.functions import Distance
 import qrcode
+from django.shortcuts import get_object_or_404
 from users.models import UserProfile
 from users.serializers import UserProfileSerializer
 from io import BytesIO
@@ -62,6 +63,44 @@ class ProfileView(APIView):
                 'message': 'Error creating profile',
                 'status_code': status.HTTP_400_BAD_REQUEST
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+    def patch(self, request, *args, **kwargs):
+        try:
+            profile_obj = Profile.objects.get(id = request.data['id'], user = request.user)
+            serializer = ProfileSerializer(profile_obj, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except:
+            return Response({
+                'message': 'Error creating profile',
+                'status_code': status.HTTP_400_BAD_REQUEST
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class AddProfilePicture(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        # Check if the user is authenticated
+
+        # Extract data from the request
+        selfie = request.data.get('selfie_image')
+        gallery_image = request.data.get('gallery_image')
+
+        # Validate category_id and get the category
+        try:
+            profile_obj = Profile.objects.get(id = request.data.get('id'), user = request.user)
+            profile_obj.image = selfie
+            profile_obj.save()
+            serializer = ProfileSerializer(profile_obj)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Profile.DoesNotExist:
+            return Response({"error": "Image not saved"}, status=status.HTTP_404_NOT_FOUND)
+
         
 class SearchProfileView(APIView):
     permission_classes = [IsAuthenticated]
@@ -299,3 +338,20 @@ class GetSavedProfiles(APIView):
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class ProfileCategoryListAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        categories = ProfileCategory.objects.all()
+        serializer = ProfileCategorySerializer(categories, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class ProfileCategorySocialSiteListAPIView(APIView):
+    def get(self, request, category_id, *args, **kwargs):
+        try:
+            category = ProfileCategory.objects.get(pk=category_id)
+        except ProfileCategory.DoesNotExist:
+            return Response({"error": "Category not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        social_sites = ProfileCategorySocialSite.objects.filter(profile_category=category)
+        serializer = ProfileCategorySocialSiteSerializer(social_sites, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

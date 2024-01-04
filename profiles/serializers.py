@@ -6,7 +6,7 @@ from pyexpat import model
 from rest_framework import serializers
 from users.serializers import ProfileCommentSerializer
 from users.models import ProfileComment, UserProfile
-from .models import Profile
+from .models import Profile, ProfileCategory, ProfileCategorySocialSite
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -43,4 +43,16 @@ class ProfileSerializer(serializers.ModelSerializer):
                 validated_data['saved'] = False
         else:
             validated_data['saved'] = False
+        if validated_data['image']:
+            validated_data['image'] = "https://dev.antrocorp.com" + validated_data['image']
         return validated_data
+    
+class ProfileCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfileCategory
+        fields = '__all__'
+
+class ProfileCategorySocialSiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfileCategorySocialSite
+        fields = '__all__'

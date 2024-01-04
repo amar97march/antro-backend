@@ -220,7 +220,7 @@ class OrganisationSerializer(serializers.ModelSerializer):
     def to_representation(self, data):
         
         data = super(OrganisationSerializer, self).to_representation(data)
-        data["logo"] = "http://localhost:8000"+ data["logo"]
+        data["logo"] = "https://dev.antrocorp.com"+ data["logo"]
         return data
     
 

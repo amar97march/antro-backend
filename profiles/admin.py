@@ -5,7 +5,7 @@ from .models import Profile, Keyword, ProfileCategory, ProfileCategorySocialSite
 
 @admin.register(Profile)
 class ProfileAdmin(OSMGeoAdmin):
-    list_display = ('first_name', 'location')
+    list_display = ('name', 'location')
 
 @admin.register(Keyword)
 class KeywordAdmin(OSMGeoAdmin):

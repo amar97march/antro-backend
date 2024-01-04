@@ -18,5 +18,7 @@ urlpatterns = [
     path('save_profile/', SaveProfile.as_view(), name='save_profile'),
     path('unsave_profile/', UnsaveProfile.as_view(), name='unsave_profile'),
     path('get_saved_profiles/', GetSavedProfiles.as_view(), name='get_saved_profiles'),
-
+    path('update_profile_picture/', AddProfilePicture.as_view(), name="update_profile_pic"),
+    path('profile-categories/', ProfileCategoryListAPIView.as_view(), name='profile-category-list-api'),
+    path('profile-category-social-sities/<int:category_id>/', ProfileCategorySocialSiteListAPIView.as_view(), name='profile-category-social-site-list-api')
 ]

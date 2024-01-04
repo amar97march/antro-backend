@@ -106,7 +106,7 @@ class SearchProfileView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request):
         try:
-            queryset = Profile.objects.all().order_by('first_name')
+            queryset = Profile.objects.all().order_by('name')
             if request.data['location']:
                 longitude = request.data['location']['longitude']
                 latitude = request.data['location']['latitude']
@@ -119,7 +119,7 @@ class SearchProfileView(APIView):
                 if sort_by:
                     sort_by_mapped = sort_by
                     if (sort_by == 'name'):
-                        sort_by_mapped = 'first_name'
+                        sort_by_mapped = 'name'
                     elif (sort_by == 'status'):
                         sort_by_mapped = 'upload_status'
                     queryset = queryset.order_by(sort_by_mapped)
@@ -152,7 +152,7 @@ class MyProfilesView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
-            queryset = Profile.objects.filter(user=request.user).order_by('first_name')
+            queryset = Profile.objects.filter(user=request.user).order_by('name')
             profile_serializer_obj = ProfileSerializer(queryset, many=True, context={'request': request})
             return Response({
                 'message': 'successfully retrieve profiles information',

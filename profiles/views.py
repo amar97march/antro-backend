@@ -54,6 +54,7 @@ class ProfileView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
             feedback_serializer.save()
             return Response({
+                data: feedback_serializer.data,
                 'message': 'successfully added profile'
             })
 

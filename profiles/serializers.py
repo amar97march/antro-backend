@@ -44,7 +44,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         else:
             validated_data['saved'] = False
         if validated_data['image']:
-            validated_data['image'] = "https://dev.antrocorp.com" + validated_data['image']
+            validated_data['image'] = "http://dev.antrocorp.com" + validated_data['image']
         return validated_data
     
 class ProfileCategorySerializer(serializers.ModelSerializer):

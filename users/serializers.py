@@ -101,7 +101,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
                 data["branch"] = None
         print(data, 'AA')
         if data["image"]:
-            data['image'] = "https://dev.antrocorp.com" + str(data["image"])
+            data['image'] = "http://dev.antrocorp.com" + str(data["image"])
         return data
     
 
@@ -220,7 +220,7 @@ class OrganisationSerializer(serializers.ModelSerializer):
     def to_representation(self, data):
         
         data = super(OrganisationSerializer, self).to_representation(data)
-        data["logo"] = "https://dev.antrocorp.com"+ data["logo"]
+        data["logo"] = "http://dev.antrocorp.com"+ data["logo"]
         return data
     
 

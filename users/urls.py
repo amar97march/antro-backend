@@ -42,4 +42,10 @@ urlpatterns = [
     path('profile_comments/<int:pk>/', ProfileCommentRetrieveUpdateDestroyView.as_view(), name='comment-retrieve-update-destroy'),
     path('profile_likes/', ProfileLikeCreateView.as_view(), name='like-create'),
     path('profile_likes/<int:pk>/', ProfileLikeDestroyView.as_view(), name='like-destroy'),
+    path('smart_find_user/', SmartFindUser.as_view(), name='smart-find-user'),
+    path('create_authentication_entity/', CreateAuthenticationEntity.as_view(), name='create-authentication-entity'),
+    path('authentication-entity-status/<str:authentication_entity_id>/', CheckAuthenticationEntity.as_view(), name='authentication-entity-update'),
+    path('data_exist_check/', DataExistCheck.as_view(), name='data_exist_check'),
+    path('create_user_from_auth_entity/', CreateUserFromAuthEntity.as_view(), name='create_user_from_auth_entity'),
+    path('send_email_phone_otp/', SendEmailPhoneOtp.as_view(), name='send_email_phone_otp'),
 ]

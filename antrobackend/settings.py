@@ -15,12 +15,15 @@ import datetime
 import environ
 import os
 
+import logging
+
 from dotenv import load_dotenv
 
 load_dotenv()
 env = environ.Env(
     DEBUG=(bool, False)
 )
+logger = logging.getLogger(__name__)
 
 READ_DOT_ENV_FILE = env('READ_DOT_ENV_FILE')
 if READ_DOT_ENV_FILE:
@@ -70,9 +73,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'django_extensions',
-#    'push_notifications',
+    'storages',
     'rest_framework',
     'users',
+    'celery',
+    'django_celery_results',
     'phonenumber_field',
     'django.contrib.gis',
     'profiles',
@@ -217,8 +222,8 @@ AUTH_USER_MODEL = 'users.User'
 #GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.11.1/lib/libgeos_c.dylib"
 
 # Local
-# GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.8.0/lib/libgdal.dylib"
-# GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.12.1/lib/libgeos_c.dylib"
+GDAL_LIBRARY_PATH="/opt/homebrew/Cellar/gdal/3.8.3/lib/libgdal.dylib"
+GEOS_LIBRARY_PATH="/opt/homebrew/Cellar/geos/3.12.1/lib/libgeos_c.dylib"
 
 ALLOWED_HOSTS = ['*']
 
@@ -228,15 +233,36 @@ ALLOWED_HOSTS = ['*']
 #     os.path.join(BASE_DIR, 'static/')
 # ]
 
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
+# STATIC_URL = '/static/'
+# STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
 
-STATICFILES_DIR = {
-    os.path.join(BASE_DIR , "/public/static")
+# STATICFILES_DIR = {
+#     os.path.join(BASE_DIR , "/public/static")
+# }
+# MEDIA_ROOT =  os.path.join(BASE_DIR, 'public/static') 
+# MEDIA_URL = '/media/'
+
+AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID') 
+AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = 'antro-backend'
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
 }
-MEDIA_ROOT =  os.path.join(BASE_DIR, 'public/static') 
-MEDIA_URL = '/media/'
+AWS_LOCATION = 'static'
 
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, 'antro/static'),
+# ]
+AWS_STATIC_LOCATION = 'static'
+STATICFILES_STORAGE = 'antrobackend.storage_backends.StaticStorage'
+STATIC_URL = "https://%s/%s/" % (AWS_S3_CUSTOM_DOMAIN, AWS_STATIC_LOCATION)
+
+AWS_PUBLIC_MEDIA_LOCATION = 'media/public'
+DEFAULT_FILE_STORAGE = 'antrobackend.storage_backends.PublicMediaStorage'
+
+AWS_PRIVATE_MEDIA_LOCATION = 'media/private'
+PRIVATE_FILE_STORAGE = 'antrobackend.storage_backends.PrivateMediaStorage'
 
 # Push notification settings
 PUSH_NOTIFICATIONS_SETTINGS = {
@@ -250,7 +276,6 @@ PUSH_NOTIFICATIONS_SETTINGS = {
     },
 }
 
-ALLOWED_HOSTS = ["localhost:3000/","192.168.0.50"]
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -269,3 +294,21 @@ CORS_ALLOW_CREDENTIALS = True
 # ]
 CORS_ORIGIN_ALLOW_ALL = True
 ALLOWED_HOSTS = ['*']
+
+
+CELERY_BROKER_URL = 'redis://localhost:6379'
+# CELERY_RESULT_BACKEND = 'celery.backends.database:DatabaseBackend'
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',  # Change this according to your Redis server's URL & port
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}

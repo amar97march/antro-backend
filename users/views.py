@@ -6,19 +6,22 @@ from rest_framework import status, generics, serializers
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import  Response
 from rest_framework.views import APIView
-from .utils import get_tokens_for_user
+from .utils import get_tokens_for_user, compare_selfie_with_all_users
 from django.db.models import Q
 from rest_framework_simplejwt.tokens import OutstandingToken
 from users.models import User, PhoneVerification, UserProfile, RequestData, AddressBookItem,\
 Document, DocumentCategory, OnboardingLink, EmailVerification, ResetPasswordVerification, TempUser , TempUserProfile, AccountMergeRequest,\
-ProfileComment, ProfileLike, TempUserStatus
+ProfileComment, ProfileLike, TempUserStatus, AuthenticationEntity, HandGesture
 from .serializers import RegistrationSerializer, PasswordChangeSerializer, UserSerializer, UserProfileSerializer, \
-AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer, detect_email_or_phone, HiddenUserSerializer,\
+AddressBookItemSerializer, OrganisationSerializer, DocumentSerializer, DocumentCategorySerializer, HiddenUserSerializer,\
 ProfileCommentSerializer, ProfileLikeSerializer, TempUserStatusSerializer, DetailUserSerializer
 from .utils import send_verification_otp, send_reset_password_otp, send_email_verification_otp, send_email_account_merge_otp
+from .tasks import perform_user_detection, test
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import utc
+from django.conf import settings
 import json
+from django.utils import timezone
 import random
 import datetime
 import uuid
@@ -31,6 +34,8 @@ from phonenumber_field.phonenumber import PhoneNumber
 
 from django.db.models import Count, DateField, F
 from django.db.models.functions import TruncDate
+from django.core.files.storage import default_storage
+from moviepy.editor import VideoFileClip
 
 
 class RegistrationView(APIView):
@@ -363,7 +368,7 @@ class ResendOTP(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        otp = request.data.get('otp')
+        # otp = request.data.get('otp')
         verification_type = request.data.get('type')
         email = request.data.get('email')
 
@@ -1024,3 +1029,234 @@ class ProfileLikeDestroyView(generics.DestroyAPIView):
     queryset = ProfileLike.objects.all()
     serializer_class = ProfileLikeSerializer
     permission_classes = [IsAuthenticated]
+
+import io
+import os
+import tempfile
+import time
+import boto3
+from django.core.files.storage import FileSystemStorage
+
+class SmartFindUser(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        video_file = request.data.get('video_file')
+        authentication_entity_id = request.data.get('authentication_entity_id')
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+        date_of_birth = request.data.get('date_of_birth')
+        
+
+        # try:
+        print("token:", authentication_entity_id)
+        authentication_entity_obj = AuthenticationEntity.objects.filter(id = authentication_entity_id, status = AuthenticationEntity.Status.Pending).first()
+        
+        if not authentication_entity_obj:
+            return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+        authentication_entity_obj.first_name = first_name
+        authentication_entity_obj.last_name = last_name
+        authentication_entity_obj.date_of_birth = date_of_birth
+        authentication_entity_obj.save()
+        if not video_file:
+            return Response({'error': 'Missing video file'}, status=status.HTTP_400_BAD_REQUEST)
+        # Create a unique filename for the video
+        filename = f'uploaded_video_{int(time.time())}.mp4'  # Adjust extension as needed
+        local_storage = FileSystemStorage(location=os.path.join(settings.BASE_DIR,'staticfiles'))  # Adjust path as needed
+
+        # Save the video to S3
+        with local_storage.open(filename, 'wb+') as destination:
+            for chunk in video_file.chunks():
+                destination.write(chunk)
+        abc = test.delay(name="aname")
+        print(abc)
+        # perform_user_detection.delay(filename, authentication_entity_id, first_name, last_name, date_of_birth)
+
+        return Response({"Status": "success", "message": "Request submitted"}, status=status.HTTP_201_CREATED)
+        # except Exception as e:
+        #     print(e)
+        #     return Response({'error': 'Error creating authentication entity'}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class CreateAuthenticationEntity(APIView):
+    
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+
+            gestures = ["fist", "open_hand", "thumbs_up", "thumbs_down"]
+            gesture_obj = HandGesture.objects.filter(name = random.choice(gestures)).first()
+            gesture_obj = HandGesture.objects.filter(name = 'fist').first()
+            authentication_entity_obj = AuthenticationEntity.objects.create(otp = 4321, gesture = gesture_obj.name)
+
+            # authentication_entity_obj = AuthenticationEntity.objects.create(otp = random.randint(1000, 9999), gesture = gesture_obj.name)
+            data = {
+                "id": authentication_entity_obj.id,
+                "gesture": authentication_entity_obj.gesture,
+                "gesture_url": gesture_obj.url,
+                "otp": authentication_entity_obj.otp
+            }
+            return Response({"Status": "Created", "data": data}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': 'Error creating authentication entity'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class CheckAuthenticationEntity(APIView):
+    """
+    API view to check the authentication entity
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, authentication_entity_id):
+        """
+        Get method to check the authentication entity
+        Args:
+            request: request object
+            authentication_entity_id: id of the authentication entity
+        Returns:
+            Response with the status and data
+        """
+        try:
+            authentication_entity_obj = AuthenticationEntity.objects.get(id=authentication_entity_id)
+            # Check if the authentication entity status is 1 and created within the last 24 hours
+            # twenty_four_hours_ago = timezone.now() - datetime.timedelta(hours=24)
+            print(authentication_entity_obj.status == "1", ((timezone.now() - authentication_entity_obj.created_at).total_seconds()))
+            if authentication_entity_obj.status == "1" and ((timezone.now() - authentication_entity_obj.created_at).total_seconds() <= 86400) and authentication_entity_obj.user:
+                data = {
+                    "id": authentication_entity_obj.id,
+                    "status": authentication_entity_obj.get_status_display(),
+                    "auth_data": get_tokens_for_user(authentication_entity_obj.user)
+                }
+            else:
+                data = {
+                    "id": authentication_entity_obj.id,
+                    "status": authentication_entity_obj.get_status_display()
+                }
+            
+            # Return the response with the status and data
+            return Response({"Status": "success", "data": data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            # Return error response if there's an exception
+            print(e)
+            return Response({'error': 'Error validating authentication entity'}, status=status.HTTP_400_BAD_REQUEST)
+        
+class DataExistCheck(APIView):
+    """
+    API view to check the existence of data based on type
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """
+        Get method to handle data existence check
+        :param request: request object
+        :return: response indicating the availability of data
+        """
+        try:
+            data = {
+                "type": request.GET.get('type'),
+                "value": request.GET.get('value')
+            }
+            print(data)
+            if data["type"] == "user_id":
+                data_exists = User.objects.filter(user_id=data["value"]).exists()
+            elif data["type"] == "email":
+                data_exists = User.objects.filter(email=data["value"]).exists()
+            elif data["type"] == "phone":
+                data_exists = User.objects.filter(phone=data["value"]).exists()
+            else:
+                return Response({"data_available": True}, status=status.HTTP_200_OK)
+            return Response({"data_available": not data_exists}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print("Getting data available: ", str(e))
+            return Response({'error': 'Error validating'}, status=status.HTTP_400_BAD_REQUEST)
+        
+class CreateUserFromAuthEntity(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+
+        phone_number = request.data.get('phone_number')
+        email = request.data.get('email')
+        user_id = request.data.get('user_id')
+        authentication_entity_id = request.data.get('authentication_entity_id')
+        authentication_entity_obj = AuthenticationEntity.objects.get(id=authentication_entity_id)
+        user = None
+        if authentication_entity_obj.user:
+            existing_user = authentication_entity_obj.user
+            if User.objects.filter(Q(email=email) | Q(phone_number=phone_number) | Q(user_id=user_id)).exclude(id=existing_user.id).exists():
+                return Response({"message": "Email, phone number, or user_id already exists in another user"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Update existing user's email, phone number, or user_id if not already set
+            if email:
+                existing_user.email = email
+            if phone_number:
+                existing_user.phone_number = phone_number
+            if user_id:
+                existing_user.user_id = user_id
+            existing_user.save()
+            user = existing_user
+            print("here1 ", authentication_entity_obj.user)
+        else:
+            if user_id:
+                user_id_exists = User.objects.filter(user_id=user_id).exists()
+                if user_id_exists:
+                    return Response({"message": "User already exists"}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    authentication_entity_obj.user_id_string = user_id
+            if email:
+                email_exists = User.objects.filter(email=email).exists()
+                if email_exists:
+                    return Response({"message": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    authentication_entity_obj.email = email
+            if phone_number:
+                phone_exists = User.objects.filter(phone_number=phone_number).exists()
+                if phone_exists:
+                    return Response({"message": "Phone number already exists"}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    authentication_entity_obj.phone_number = phone_number
+            authentication_entity_obj.save()
+            user = User.objects.create(user_id=user_id, email=email, phone_number=phone_number, first_name = authentication_entity_obj.first_name, last_name = authentication_entity_obj.last_name, date_of_birth = authentication_entity_obj.date_of_birth)
+            user.first_name = authentication_entity_obj.first_name
+            user.last_name = authentication_entity_obj.last_name
+            user.date_of_birth = authentication_entity_obj.date_of_birth
+            user.save()
+            authentication_entity_obj.user = user
+            authentication_entity_obj.save()
+            AuthenticationEntity.objects.filter(user = user).exclude(id = authentication_entity_obj.id).delete()
+            print("here2 ", authentication_entity_obj.user)
+        # user_profile_obj = UserProfile.objects.get(user = user)
+        serailizer_data = UserSerializer(user)
+        return Response({"message": "User created", "data": serailizer_data.data}, status=status.HTTP_201_CREATED)
+    
+
+class SendEmailPhoneOtp(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        verify_type = request.data.get('type')
+        authentication_entity_id = request.data.get('authentication_entity_id')
+        try:
+            authentication_entity_obj = AuthenticationEntity.objects.get(id=authentication_entity_id)
+            if (verify_type == "phone"):
+                phone_verify_obj = PhoneVerification.objects.get(user = authentication_entity_obj.user)
+                phone_verify_obj.otp = random.randint(1000, 9999)
+                phone_verify_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
+                phone_verify_obj.save()
+                send_verification_otp(authentication_entity_obj.user.phone_number, phone_verify_obj.otp)
+                return Response({"message": "OTP sent"}, status=status.HTTP_200_OK)
+            elif (verify_type == "email"):
+                email_verify_obj = EmailVerification.objects.get(user = authentication_entity_obj.user)
+                email_verify_obj.otp = random.randint(1000, 9999)
+                email_verify_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
+                email_verify_obj.save()
+                send_email_verification_otp(authentication_entity_obj.user.email, email_verify_obj.otp)
+                return Response({"message": "OTP sent"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "Invalid type"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print("Sending OTP: ", str(e))
+            return Response({"message": "Error sending OTP"}, status=status.HTTP_400_BAD_REQUEST)

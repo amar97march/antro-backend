@@ -1,6 +1,7 @@
 from django.contrib.gis.db import models
 from django.db.models import Q
 from phonenumber_field.modelfields import PhoneNumberField
+from antrobackend.storage_backends import PublicMediaStorage
 
 
 class Keyword(models.Model):
@@ -88,7 +89,7 @@ class Profile(models.Model):
     verified_by_antro = models.BooleanField(default=False)
     verified_by_user = models.BooleanField(default=False)
     verified_by_organisation = models.BooleanField(default=False)
-    image = models.ImageField(upload_to='profile_image', blank=True, null = True)
+    image = models.ImageField(storage=PublicMediaStorage(), blank=True, null = True)
 
     objects = ProfileManager()
 

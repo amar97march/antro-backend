@@ -7,6 +7,7 @@ import uuid
 import random
 import string
 from phonenumber_field.modelfields import PhoneNumberField
+from antrobackend.storage_backends import PublicMediaStorage
 
 
 
@@ -41,7 +42,7 @@ class Organisation(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, unique=True, verbose_name="Company Name")
-    logo = models.ImageField(upload_to="company_logos/", null=True, blank=True, verbose_name="Company Logo")
+    logo = models.ImageField(storage=PublicMediaStorage(), null=True, blank=True, verbose_name="Company Logo")
     website = models.URLField(max_length=255, blank=True, verbose_name="Website")
     description = models.TextField(blank=True, verbose_name="Description")
     founded_year = models.PositiveIntegerField(null=True, blank=True, verbose_name="Founded Year")
@@ -92,16 +93,16 @@ def generate_user_id():
     return generated_id
 
 class User(AbstractBaseUser, PermissionsMixin):
-    user_id = models.CharField(max_length=10, unique=True, default=generate_user_id, editable=False)
+    user_id = models.CharField(max_length=15, unique=True, default=generate_user_id, editable=False)
     email = models.EmailField(max_length=254,null=True, blank=True)
     phone_number = PhoneNumberField(blank=True, null=True)
     first_name = models.CharField(max_length=254, null=True, blank=True)
     last_name = models.CharField(max_length=254, null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     organisation = models.ForeignKey(
-                Organisation, 
-                on_delete=models.CASCADE, 
-                blank=True, 
+                Organisation,
+                on_delete=models.CASCADE,
+                blank=True,
                 null=True
       )
     is_staff = models.BooleanField(default=False)
@@ -175,7 +176,7 @@ class TempUserStatus(models.Model):
         ('completed', 'Completed'),
     ]
     email = models.EmailField(max_length=254)
-    user_id = models.CharField(max_length=10, blank = True, null = True)
+    user_id = models.CharField(max_length=15, blank = True, null = True)
     first_name = models.CharField(max_length=254, null=True, blank=True)
     phone_number = PhoneNumberField(blank=True, null=True)
     last_name = models.CharField(max_length=254, null=True, blank=True)
@@ -217,7 +218,7 @@ class UserProfile(models.Model):
     )
     bio = models.CharField(max_length=200, default='', blank=True)
     phone_number = PhoneNumberField(blank=True, null=True)
-    image = models.ImageField(upload_to='profile_image', blank=True, null = True)
+    image = models.ImageField(storage=PublicMediaStorage(), blank=True, null = True)
     gender = models.CharField(default='', blank=True, max_length=20)
     contact_information = models.CharField(null=True, blank= True, max_length=50)
     education = models.CharField(null=True, blank= True, max_length=50)
@@ -364,7 +365,7 @@ class Document(models.Model):
     verified_by_antro = models.BooleanField(default=False)
     verified_by_user = models.BooleanField(default=False)
     verified_by_organisation = models.BooleanField(default=False)
-    file = models.FileField(upload_to='documents/')
+    file = models.FileField(storage=PublicMediaStorage())
     active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -386,7 +387,6 @@ class AccountMergeRequest(models.Model):
     merged = models.BooleanField(default=False)
 
 
-
 class ProfileComment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='comments')
@@ -400,3 +400,39 @@ class ProfileLike(models.Model):
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='likes')
     created_at = models.DateTimeField(auto_now_add=True)
     # Add other fields as needed
+
+class AuthenticationEntity(models.Model):
+
+    class Status(models.TextChoices):
+        Pending =  0, "Pending"
+        Verified = 1, "Verified"
+        Failed = 2, "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null = True, blank = True)
+    email = models.EmailField(max_length=254, blank = True, null = True)
+    user_id_string = models.CharField(max_length=15, blank = True, null = True)
+    phone_number = PhoneNumberField(blank=True, null=True)
+    first_name = models.CharField(max_length=254, null=True, blank=True)
+    last_name = models.CharField(max_length=254, null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    image_url = models.URLField(null=True, blank = True)
+    otp = models.IntegerField(null = False, blank = False, default = 0)
+    gesture = models.CharField(max_length = 50, null = False, blank = False)
+    status = models.CharField(max_length=50,
+                              choices=Status.choices,
+                              default=Status.Pending)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}: {self.date_of_birth}"
+    
+class HandGesture(models.Model):
+
+    name = models.CharField(max_length = 50, null = False, blank = False, unique = True)
+    url = models.URLField(null = False, blank = False, unique = True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name

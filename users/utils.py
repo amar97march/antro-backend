@@ -438,7 +438,11 @@ def generate_random_string(length=15):
     return random_string
 import re
 
+import multiprocessing
+
 def compare_selfie_with_all_users(image, first_name, last_name, date_of_birth, authentication_entity_id, transcribed_data, detected_gesture, image_url):
+
+    print("AMAR AT 42")
     authentication_entity_obj = AuthenticationEntity.objects.get(id = authentication_entity_id)
     rekognition = boto3.client('rekognition',
                                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -492,7 +496,7 @@ import mediapipe as mp
 import numpy as np
 import math
 
-mp_drawing = mp.solutions.drawing_utils
+# mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
 gestures = {
     "fist": {
@@ -517,6 +521,11 @@ gestures = {
     }
     # Add more gestures as needed, including their relevant features
 }
+
+def initialize_hands():
+    """Creates and initializes mp_hands.Hands object."""
+    hands = mp.solutions.hands.Hands(max_num_hands=1, min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    return hands
 
 def calculate_fingertip_distances(hand_landmarks):
     """Calculates approximate distances between fingertips and the palm center."""
@@ -598,7 +607,7 @@ def calculate_feature_distance(features1, features2):
 
     return total_distance
 
-
+@shared_task
 def classify_gesture(image_bytes):
     """Classifies a gesture from a single byte image."""
 
@@ -606,15 +615,23 @@ def classify_gesture(image_bytes):
     image_array = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), -1)
 
     # Initialize MediaPipe Hands only for this image
+    print("yyy1")
     with mp_hands.Hands(
         max_num_hands=1,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5) as hands:
+        print("kkkkk65")
         results = hands.process(cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB))
+        print("kkkk67")
 
         # Extract hand landmarks if detected
         hand_landmarks = results.multi_hand_landmarks[0] if results.multi_hand_landmarks else None
-
+        print("kkk69")
+    # multiprocessing.current_process().daemon = False
+    # with multiprocessing.Pool(processes=1) as pool:
+    #     results = pool.apply(process_image, (image_array,))
+    #     hand_landmarks = results[0]
+    print("yyy2")
     # If landmarks are found, proceed with gesture classification
     if hand_landmarks:
         # Extract relevant features from the detected hand landmarks
@@ -624,7 +641,7 @@ def classify_gesture(image_bytes):
             "thumb_angle": calculate_thumb_angle(hand_landmarks),
             # ... (extract other relevant features)
         }
-
+        print("yyy3")
         # Compare extracted features with predefined gesture features
         closest_gesture = None
         min_distance = float('inf')
@@ -633,11 +650,24 @@ def classify_gesture(image_bytes):
             if distance < min_distance:
                 min_distance = distance
                 closest_gesture = gesture_name
-
+        print("yyy4")
         return closest_gesture
     else:
         return "No hand detected"
+    
+def process_image(image_array):
+    """Processes an image using MediaPipe Hands."""
+    # Reconstruct AuthenticationString within the function (if needed)
+    # ... (reconstruction logic using original creation method)
 
+    with mp_hands.Hands(
+        max_num_hands=1,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5) as hands:  # Use reconstructed object here
+        results = hands.process(cv2.cvtColor(image_array, cv2.COLOR_BGR2RGB))
+        return results.multi_hand_landmarks[0] if results.multi_hand_landmarks else None
+
+@shared_task
 def transcribe_code_from_audio_wav(audio_filename, duration):
     """
     Transcribes code from an audio WAV file using AWS Transcribe service.
@@ -653,7 +683,7 @@ def transcribe_code_from_audio_wav(audio_filename, duration):
                               aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                                region_name='ap-south-1')
-    job_name = f'transcribe_job_{int(duration // 2)}{int(time.time())}'  # Unique job name
+    job_name = f'transcribe_job_{audio_filename}{int(duration // 2)}{int(time.time())}'  # Unique job name
     
     # Save the video to S3
     local_storage = FileSystemStorage(location=os.path.join(settings.BASE_DIR,'staticfiles'))  # Adjust path as needed
@@ -667,24 +697,27 @@ def transcribe_code_from_audio_wav(audio_filename, duration):
     )
     try:
         s3.upload_file(local_file_path, s3_bucket_name, s3_file_key)
-        print("File uploaded successfully to S3")
+        print("File uploaded successfuddlly to S3")
     except Exception as e:
         print("Error uploading file:", e)
     job_uri = f"https://antro-backend.s3.ap-south-1.amazonaws.com/media/public/{audio_filename}"
     # job_uri = f"https://antro-backend.s3.ap-south-1.amazonaws.com/media/public/extracted_audioa_2.wav"
+    print("amasf4223")
     transcribe.start_transcription_job(
         TranscriptionJobName=job_name,
         Media={'MediaFileUri': job_uri},
         MediaFormat='wav',
         LanguageCode='en-US'  # Adjust language code as needed
     )
+    print("aksjfsa132412")
 
     # Wait for transcription job to complete
     while True:
         job_status = transcribe.get_transcription_job(TranscriptionJobName=job_name)
         if job_status['TranscriptionJob']['TranscriptionJobStatus'] in ['COMPLETED', 'FAILED']:
             break
-        time.sleep(5)  # Check status every 5 seconds
+        # time.sleep(5)  # Check status every 5 seconds
+    print("kakakakskkakkikikikuku")
     
     # Retrieve transcribed text
     if job_status['TranscriptionJob']['TranscriptionJobStatus'] == 'COMPLETED':
@@ -693,6 +726,7 @@ def transcribe_code_from_audio_wav(audio_filename, duration):
         otp = transcript_text["results"]["transcripts"][0]["transcript"]
         file_path = local_storage.path(audio_filename)  # Get the full file path
         os.remove(file_path)
+        print("gjkhjhjhkhjhj")
         return {"otp": otp}
     else:
         print("Transcription job failed:", job_status['TranscriptionJob']['FailureReason'])

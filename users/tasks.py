@@ -31,6 +31,7 @@ def test(name):
     logger.info('doing task')
     logger.warning('doing task')
 
+
 @shared_task
 def perform_user_detection(filename, authentication_entity_id, first_name, last_name, date_of_birth):
     
@@ -48,17 +49,20 @@ def perform_user_detection(filename, authentication_entity_id, first_name, last_
         filename_full = os.path.join(settings.BASE_DIR,'staticfiles', audio_filename)
         audio_clip.write_audiofile(filename_full)
         transcribed_data =  transcribe_code_from_audio_wav(audio_filename, duration)
-        
+        print("KJghjg1")
         # Video frame
         image_filename = f'screenshot_{authentication_entity_id}.jpg'
         image_filename_full = os.path.join(settings.BASE_DIR,'staticfiles', image_filename)
         video_clip.save_frame(image_filename_full, t=duration // 2)
+        print("KJghjg1.1")
         with open(image_filename_full, 'rb') as image_file:
             image_bytes = image_file.read()
             detected_gesture = classify_gesture(image_bytes)
+        print("KJghjg2")
         local_storage = FileSystemStorage(location=os.path.join(settings.BASE_DIR,'staticfiles'))  # Adjust path as needed
         local_file_path = f'{os.path.join(settings.BASE_DIR, "staticfiles")}/{image_filename}'
         s3_bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+        print("KJghjg3")
         s3_file_key = f'media/public/{image_filename}'
         s3 = boto3.client(
             's3',
@@ -67,14 +71,15 @@ def perform_user_detection(filename, authentication_entity_id, first_name, last_
         )
         try:
             s3.upload_file(local_file_path, s3_bucket_name, s3_file_key)
-            print("File uploaded successfully to S3")
+            print("File uploaded successfully to S3-2")
         except Exception as e:
             print("Error uploading file:", e)
         image_url = f"https://antro-backend.s3.ap-south-1.amazonaws.com/media/public/{image_filename}"
 
-        
+        print("File uploaded dsafasf to S3")
     except Exception as e:
         print("User Validating Error: ", str(e))
+    print("User Validating Error: ")
     file_path = local_storage.path(filename)  # Get the full file path
     os.remove(file_path)
     compare_selfie_with_all_users(image_bytes, first_name, last_name, date_of_birth, authentication_entity_id, transcribed_data, detected_gesture, image_url)

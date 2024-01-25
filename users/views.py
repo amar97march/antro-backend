@@ -162,7 +162,7 @@ class LoginView(APIView):
                     user_obj.set_password(generate_random_string())
                     user_obj.save()
             phone_verification_obj, flag = PhoneVerification.objects.get_or_create(user = user_obj)
-            phone_verification_obj.otp = 1234 #random.randint(1000, 9999)
+            phone_verification_obj.otp = random.randint(1000, 9999)
             phone_verification_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
             phone_verification_obj.verified = False
             phone_verification_obj.save()
@@ -377,7 +377,7 @@ class ResendOTP(APIView):
             if (verification_type == "email_verification"):
 
                 email_obj = EmailVerification.objects.get(user = user)
-                email_obj.otp = 1234 #random.randint(1000, 9999)
+                email_obj.otp = random.randint(1000, 9999)
                 email_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
                 email_obj.save()
                 send_email_verification_otp(user.email, email_obj.otp)
@@ -415,7 +415,7 @@ class ResetPasswordRequest(APIView):
         try:
             user_obj = User.objects.get(email = email)
             reset_obj, created = ResetPasswordVerification.objects.get_or_create(user = user_obj)
-            reset_obj.otp = 1234 #random.randint(1000, 9999)
+            reset_obj.otp = random.randint(1000, 9999)
             reset_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
             send_reset_password_otp(user_obj.email, reset_obj.otp)
             reset_obj.updated = False
@@ -683,7 +683,7 @@ class DLinkSecretDetails(APIView):
         try:
             onboard_obj = OnboardingLink.objects.get(android_deeplink_code = secret)
             temp_user_obj = onboard_obj.user
-            temp_user_obj.otp = 1234 #random.randint(1000, 9999)
+            temp_user_obj.otp = random.randint(1000, 9999)
             temp_user_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
             temp_user_obj.merged = False
             temp_user_obj.save()
@@ -945,7 +945,7 @@ class MergeAccount(APIView):
             old_user = User.objects.filter(user_id = user_id).first()
             if (old_user):
                 request_obj, flag = AccountMergeRequest.objects.get_or_create(user = request.user, from_account = old_user)
-                request_obj.otp = 1234 #random.randint(1000, 9999)
+                request_obj.otp = random.randint(1000, 9999)
                 request_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
                 request_obj.merged = False
                 request_obj.save()
@@ -974,7 +974,7 @@ class MergeAccount(APIView):
                 # return Response({'data': 'Account verified'}, status=status.HTTP_200_OK)
 
 
-                request_obj.otp = 1234 #random.randint(1000, 9999)
+                request_obj.otp = random.randint(1000, 9999)
                 request_obj.verification_time = datetime.datetime.now() + datetime.timedelta(minutes=2)
                 request_obj.merged = False
                 request_obj.save()
@@ -1050,7 +1050,7 @@ class SmartFindUser(APIView):
 
         # try:
         print("token:", authentication_entity_id)
-        authentication_entity_obj = AuthenticationEntity.objects.filter(id = authentication_entity_id, status = AuthenticationEntity.Status.Pending).first()
+        authentication_entity_obj = AuthenticationEntity.objects.filter(id = authentication_entity_id).first()
         
         if not authentication_entity_obj:
             return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1068,9 +1068,9 @@ class SmartFindUser(APIView):
         with local_storage.open(filename, 'wb+') as destination:
             for chunk in video_file.chunks():
                 destination.write(chunk)
-        abc = test.delay(name="aname")
-        print(abc)
-        # perform_user_detection.delay(filename, authentication_entity_id, first_name, last_name, date_of_birth)
+        # abc = test.delay(name="aname")
+        # print(abc)
+        perform_user_detection.delay(filename, authentication_entity_id, first_name, last_name, date_of_birth)
 
         return Response({"Status": "success", "message": "Request submitted"}, status=status.HTTP_201_CREATED)
         # except Exception as e:
@@ -1088,9 +1088,9 @@ class CreateAuthenticationEntity(APIView):
             gestures = ["fist", "open_hand", "thumbs_up", "thumbs_down"]
             gesture_obj = HandGesture.objects.filter(name = random.choice(gestures)).first()
             gesture_obj = HandGesture.objects.filter(name = 'fist').first()
-            authentication_entity_obj = AuthenticationEntity.objects.create(otp = 4321, gesture = gesture_obj.name)
+            # authentication_entity_obj = AuthenticationEntity.objects.create(otp = 4321, gesture = gesture_obj.name)
 
-            # authentication_entity_obj = AuthenticationEntity.objects.create(otp = random.randint(1000, 9999), gesture = gesture_obj.name)
+            authentication_entity_obj = AuthenticationEntity.objects.create(otp = random.randint(1000, 9999), gesture = gesture_obj.name)
             data = {
                 "id": authentication_entity_obj.id,
                 "gesture": authentication_entity_obj.gesture,
@@ -1165,7 +1165,7 @@ class DataExistCheck(APIView):
             elif data["type"] == "email":
                 data_exists = User.objects.filter(email=data["value"]).exists()
             elif data["type"] == "phone":
-                data_exists = User.objects.filter(phone=data["value"]).exists()
+                data_exists = User.objects.filter(phone_number=data["value"]).exists()
             else:
                 return Response({"data_available": True}, status=status.HTTP_200_OK)
             return Response({"data_available": not data_exists}, status=status.HTTP_200_OK)
